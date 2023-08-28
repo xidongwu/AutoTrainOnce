@@ -55,7 +55,7 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-parser.add_argument('data', metavar='DIR',
+parser.add_argument('data', default='/data/ILSVRC2012', type=str, metavar='DIR',
                     help='path to dataset')
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50')
                     # choices=model_names,
@@ -126,8 +126,7 @@ parser.add_argument('--grad_mul', default=10.0, type=float)
 parser.add_argument('--reg_w', default=4.0, type=float)
 parser.add_argument('--gl_lam', default=0.0001, type=float)
 parser.add_argument('--start_epoch_hyper', default=20, type=int)
-parser.add_argument('--start_epoch_gl', default=100, type=int)
-
+parser.add_argument('--start_epoch_gl', default=50, type=int)
 
 
 parser.add_argument('--lr-step-size', default=30, type=int, help='decrease lr every step-size epochs')
@@ -547,8 +546,12 @@ def main():
             transforms.Compose([
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
+                transforms.ColorJitter(
+                    brightness=0.4,
+                    contrast=0.4,
+                    saturation=0.4,
+                    hue=0.2),
                 transforms.ToTensor(),
-                # jittering,
                 # lighting,
                 normalize,
             ]))
@@ -664,29 +667,28 @@ def main():
             print("None")
             remain_epochs = args.epochs - 5
             if (epoch+1)%10 == 0:
+                acc1 = validate(val_loader, model, criterion, args)
                 if epoch >= args.start_epoch_gl:
+                    print("Test acc under the guie of LM")
                     acc1 = validateMask(val_loader, model, hyper_net, criterion, args)
-                else:
-                    acc1 = validate(val_loader, model, criterion, args)
                 print_flops(hyper_net, args)
             elif epoch >= int(( remain_epochs- 10) / 3 * 2):
+                acc1 = validate(val_loader, model, criterion, args)
                 if epoch >= args.start_epoch_gl:
+                    print("Test acc under the guie of LM")
                     acc1 = validateMask(val_loader, model, hyper_net, criterion, args)
-                else:
-                    acc1 = validate(val_loader, model, criterion, args)
-
                 print_flops(hyper_net, args)
             elif epoch == args.epochs-1:
+                acc1 = validate(val_loader, model, criterion, args)
                 if epoch >= args.start_epoch_gl:
+                    print("Test acc under the guie of LM")
                     acc1 = validateMask(val_loader, model, hyper_net, criterion, args)
-                else:
-                    acc1 = validate(val_loader, model, criterion, args)
                 print_flops(hyper_net, args)
             elif epoch == 0:
+                acc1 = validate(val_loader, model, criterion, args)
                 if epoch >= args.start_epoch_gl:
+                    print("Test acc under the guie of LM")
                     acc1 = validateMask(val_loader, model, hyper_net, criterion, args)
-                else:
-                    acc1 = validate(val_loader, model, criterion, args)
                 print_flops(hyper_net, args)
 
             if hasattr(model, 'module'):
