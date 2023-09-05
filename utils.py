@@ -330,8 +330,14 @@ class Flops_constraint_resnet_bb(nn.Module):
         sum_flops = self.get_flops(input)
 
         resource_ratio = (sum_flops / self.t_flops)
-        abs_rv = torch.clamp(resource_ratio, min=self.p) ### 现在有大的变小，之后补充小的
-        loss = torch.log((abs_rv / (self.p))+1e-8)
+        # abs_rv = torch.clamp(resource_ratio, min=self.p) ### 现在有大的变小，之后补充小的
+        # loss = torch.log((abs_rv / (self.p))+1e-8)
+        if resource_ratio > self.p:
+            abs_rv = torch.clamp(resource_ratio, min=self.p + 0.005)
+            loss = torch.log((abs_rv / (self.p)))
+        else:
+            abs_rv = torch.clamp(resource_ratio, max=self.p - 0.005)
+            loss = torch.log(((self.p) / abs_rv))
 
         # loss = torch.log(torch.abs(sum_flops/self.t_flops - (self.p))+ 1)
 
