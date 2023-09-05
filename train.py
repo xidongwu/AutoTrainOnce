@@ -367,7 +367,8 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
         top1.update(acc1[0], input.size(0))
         top5.update(acc5[0], input.size(0))
 
-        if epoch >= args.start_epoch_hyper:
+        # if epoch >= args.start_epoch_hyper:
+        if epoch >= args.start_epoch_hyper and (epoch < int((args.epochs - 5)/ 2) + 1 + 5):
             if (i + 1) % args.hyper_step == 0:
                 val_inputs, val_targets = next(iter(valid_loader))
                 if args.gpu is not None:

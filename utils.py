@@ -188,7 +188,7 @@ class Flops_constraint_resnet(nn.Module):
             #     c_in = custom_STE.apply(input[i-1], False).sum()
             c_out = current_tensor.sum()
             #two layer as a group
-            sum_flops+= self.k_size[2*i]*(self.in_csize[2*i]/self.g_size[2*i])*c_out*self.out_size[2*i] + 3*c_out*self.out_size[2*i]
+            sum_flops+= self.k_size[2*i]*(self.in_csize[2*i]/self.g_size[2*i])*c_out*self.out_size[2*i]+3*c_out*self.out_size[2*i]
             sum_flops+= self.k_size[2*i+1]*(c_out/self.g_size[2*i+1])*self.out_csize[2*i+1]*self.out_size[2*i+1]+3*self.out_csize[2*i+1]*self.out_size[2*i+1]
         # loss = torch.log(torch.abs(sum_flops/self.t_flops - (self.p))+ 1)
 
@@ -330,7 +330,7 @@ class Flops_constraint_resnet_bb(nn.Module):
         sum_flops = self.get_flops(input)
 
         resource_ratio = (sum_flops / self.t_flops)
-        abs_rv = torch.clamp(resource_ratio, min=self.p)
+        abs_rv = torch.clamp(resource_ratio, min=self.p) ### 现在有大的变小，之后补充小的
         loss = torch.log((abs_rv / (self.p))+1e-8)
 
         # loss = torch.log(torch.abs(sum_flops/self.t_flops - (self.p))+ 1)

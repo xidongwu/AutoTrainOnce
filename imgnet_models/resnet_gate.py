@@ -417,10 +417,9 @@ class ResNet(nn.Module):
                 modules[layer_id - gap + 1].bias.copy_(self.groupproximal(modules[layer_id - gap + 1].bias.data, m_out, ratio, w_norm))
 
     def groupproximal(self, weight, m_out, ratio, w_norm):
-        #######  Test ######
+        # #######  Test ######
         # weight[m_out] = 0
         # return weight
-        # print("ERROR!!!!!")
         ####################
 
         # print(weight.size(), weight[m_out].size())
