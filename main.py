@@ -102,7 +102,9 @@ parser.add_argument('--p', default=0.5, type=float,
                     help='Pruning Rate')
 parser.add_argument('--stage', default='train-gate', type=str,
                     help='Which stage to choose')
-parser.add_argument('--ls', default=False, type=str2bool)
+parser.add_argument('--ls', default=True, type=str2bool)
+parser.add_argument('--mix_up', default=False, type=str2bool)
+
 # parser.add_argument('--distill', default=False, type=str2bool)
 parser.add_argument('--gates', default=2, type=int)
 parser.add_argument('--pruning_method', default='flops', type=str)
@@ -123,7 +125,7 @@ parser.add_argument('--project',type=str,default='gl')
 parser.add_argument('--hyper_step', default=20, type=int)
 
 parser.add_argument('--grad_mul', default=10.0, type=float)
-parser.add_argument('--reg_w', default=4.0, type=float)
+parser.add_argument('--reg_w', default=4.0, type=float)  # 4.0 
 parser.add_argument('--gl_lam', default=0.0001, type=float)
 parser.add_argument('--start_epoch_hyper', default=20, type=int)
 parser.add_argument('--start_epoch_gl', default=100, type=int)
@@ -428,7 +430,7 @@ def main():
         #print(list(params))
         # if args.arch == 'mobnetv2':
         optimizer_hyper = torch.optim.AdamW(params_group, lr=1e-3, weight_decay=1e-2)
-        scheduler_hyper = torch.optim.lr_scheduler.MultiStepLR(optimizer_hyper, milestones=[0.98 * args.epochs], gamma=0.1)
+        scheduler_hyper = torch.optim.lr_scheduler.MultiStepLR(optimizer_hyper, milestones=[int(0.98 * ((args.epochs - 5) / 2) + 5)], gamma=0.1)
 
         # nesterov_flag = False
         # if args.arch == 'densenet201':
@@ -462,12 +464,16 @@ def main():
         print(optimizer)
         if args.cos_anneal:
             # base_sch = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, int(args.epochs - 5))
-            base_sch = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, int((args.epochs - 5)/ 2) + 1) # int((240 - 5) / 2)
+            base_sch = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, int((args.epochs - 5)/ 2)) # int((args.epochs - 5)/ 2) + 1) # int((240 - 5) / 2)
         else:
-            remain_epochs = args.epochs - 5
-            drop_point = [int((remain_epochs - 10) / 3), int((remain_epochs - 10) / 3 * 2), int(remain_epochs - 10)]
-            print(drop_point)
-            base_sch = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=drop_point, gamma=0.1)
+            base_sch = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, int(args.epochs - 5))
+
+            # remain_epochs = args.epochs - 5
+            # drop_point = [int((remain_epochs - 10) / 3), int((remain_epochs - 10) / 3 * 2), int(remain_epochs - 10)]
+            # print(drop_point)
+            # base_sch = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=drop_point, gamma=0.1)
+        print("optimizer scheduler >>>", base_sch)
+
         # if args.arch == 'mobnetv3':
         #     base_sch = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_step_size, gamma=args.lr_gamma)
         scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=5, after_scheduler=base_sch)
@@ -601,8 +607,6 @@ def main():
         val_dataset,
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
-
-
 
     if args.stage=='train-gate':
 

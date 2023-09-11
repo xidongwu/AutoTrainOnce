@@ -1566,6 +1566,33 @@ class LabelSmoothingLoss(nn.Module):
             true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
         return torch.mean(torch.sum(-true_dist * pred, dim=self.dim))
 
+
+def one_hot(y, num_classes, smoothing_eps=None):
+    if smoothing_eps is None:
+        one_hot_y = F.one_hot(y, num_classes).float()
+        return one_hot_y
+    else:
+        one_hot_y = F.one_hot(y, num_classes).float()
+        v1 = 1 - smoothing_eps + smoothing_eps / float(num_classes)
+        v0 = smoothing_eps / float(num_classes)
+        new_y = one_hot_y * (v1 - v0) + v0
+        return new_y
+
+def cross_entropy_onehot_target(logit, target):
+    # target must be one-hot format!!
+    prob_logit = F.log_softmax(logit, dim=1)
+    loss = -(target * prob_logit).sum(dim=1).mean()
+    return loss
+
+def mixup_func(input, target, alpha=0.2):
+    gamma = np.random.beta(alpha, alpha)
+    # target is onehot format!
+    perm = torch.randperm(input.size(0))
+    perm_input = input[perm]
+    perm_target = target[perm]
+    return input.mul_(gamma).add_(1 - gamma, perm_input), target.mul_(gamma).add_(1 - gamma, perm_target)
+
+
 def group_weight(module, wegith_norm=True):
     group_decay = []
     group_no_decay = []

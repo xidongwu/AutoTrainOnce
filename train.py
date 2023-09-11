@@ -2,7 +2,7 @@ import torch
 import time
 from tqdm import tqdm
 import copy
-from utils import loss_fn_kd, display_structure, loss_label_smoothing, display_structure_hyper, LabelSmoothingLoss
+from utils import loss_fn_kd, display_structure, loss_label_smoothing, display_structure_hyper, LabelSmoothingLoss, one_hot, cross_entropy_onehot_target, mixup_func
 import numpy as np
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -281,17 +281,25 @@ def one_step_hypernet(inputs, targets, net, hyper_net, args):
 
 def one_step_net(inputs, targets, net, masks, args):
 
-    net.train()
-    sel_loss = torch.tensor(0)
 
+    targets = one_hot(targets, num_classes=1000, smoothing_eps=0.1)
+
+    if args.mix_up:
+        inputs, targets = mixup_func(inputs, targets)
+
+    net.train()
+    # sel_loss = torch.tensor(0)
     outputs = net(inputs)
 
-    if args.ls:
-        loss = LabelSmoothingLoss(classes=1000)(outputs, targets)
-        # loss_c = nn.CrossEntropyLoss()(outputs, targets)
-        # loss = alpha * loss_smooth + (1 - args.alpha) * loss_c
-    else:
-        loss = nn.CrossEntropyLoss()(outputs, targets)
+    loss = cross_entropy_onehot_target(outputs, targets)
+
+    # if args.ls:
+    #     loss = LabelSmoothingLoss(classes=1000)(outputs, targets)
+    #     # loss_c = nn.CrossEntropyLoss()(outputs, targets)
+    #     # loss = alpha * loss_smooth + (1 - args.alpha) * loss_c
+    # else:
+    #     loss = nn.CrossEntropyLoss()(outputs, targets)
+
 
     # if hasattr(args, 'reg_align') and args.reg_align:
     if hasattr(net,'module'):
@@ -368,7 +376,7 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
         top5.update(acc5[0], input.size(0))
 
         # if epoch >= args.start_epoch_hyper:
-        if epoch >= args.start_epoch_hyper and (epoch < int((args.epochs - 5)/ 2) + 1 + 5):
+        if epoch >= args.start_epoch_hyper and (epoch < int((args.epochs - 5)/ 2) + 5):
             if (i + 1) % args.hyper_step == 0:
                 val_inputs, val_targets = next(iter(valid_loader))
                 if args.gpu is not None:
