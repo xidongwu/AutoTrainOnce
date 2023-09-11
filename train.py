@@ -288,7 +288,7 @@ def one_step_net(inputs, targets, net, masks, args):
         inputs, targets = mixup_func(inputs, targets)
 
     net.train()
-    # sel_loss = torch.tensor(0)
+    sel_loss = torch.tensor(0)
     outputs = net(inputs)
 
     loss = cross_entropy_onehot_target(outputs, targets)
