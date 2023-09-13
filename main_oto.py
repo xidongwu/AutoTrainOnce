@@ -122,7 +122,7 @@ print(args)
 args.gates = 2
 gate_string = '_2gates'
 
-model = my_resnet50()
+model = my_resnet50(pretrained=True)
 args.model_name = 'resnet'
 args.block_string = model.block_string
 print_model_param_flops(model)
