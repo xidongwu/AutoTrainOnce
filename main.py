@@ -161,105 +161,110 @@ def main():
     print(args)
     global best_acc1
 
-    # create model
-    if args.pretrained:
-        print("=> using pre-trained model '{}'".format(args.arch))
-        model = models.__dict__[args.arch](pretrained=True)
-    else:
-        print("=> creating model '{}'".format(args.arch))
-        #model = models.__dict__[args.arch]()
-        #model = ResNet34()
-        if args.stage == 'train-gate':
-            print("None")
-            if args.arch == 'resnet50':
-                if args.gates == 2:
-                    gate_string = '_2gates'
-                else:
-                    gate_string = ''
+    # # create model
+    # if args.pretrained:
+    #     print("=> using pre-trained model '{}'".format(args.arch))
+    #     model = models.__dict__[args.arch](pretrained=True)
+    # else:
+    print("=> creating model '{}'".format(args.arch))
+    #model = models.__dict__[args.arch]()
+    #model = ResNet34()
+    if args.stage == 'train-gate':
+        print("None")
+        if args.arch == 'resnet50':
+            if args.gates == 2:
+                gate_string = '_2gates'
+            else:
+                gate_string = ''
 
-                # state_dict = torch.load('./checkpoint/%s_base%s.pt'%(args.arch, gate_string))
-                # model.load_state_dict(state_dict['state_dict'])
+            # state_dict = torch.load('./checkpoint/%s_base%s.pt'%(args.arch, gate_string))
+            # model.load_state_dict(state_dict['state_dict'])
+            if args.pretrained:
+                print(">>>>>>>>> Using Pretrained Model <<<<<<<<<<<<<")
+                model = my_resnet50(pretrained=True)
+            else:
+                print(">>>>>>>>> NO Pretrained Model <<<<<<<<<<<<<")
                 model = my_resnet50()
-                args.model_name = 'resnet'
-                args.block_string = model.block_string
+            args.model_name = 'resnet'
+            args.block_string = model.block_string
 
-                print_model_param_flops(model) #
+            print_model_param_flops(model) #
 
-                width, structure = model.count_structure()
+            width, structure = model.count_structure()
 
-                hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
-                hyper_net.cuda()
-                tmp = hyper_net()
-                print("Mask", tmp, tmp.size())
-                # return
+            hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
+            hyper_net.cuda()
+            tmp = hyper_net()
+            print("Mask", tmp, tmp.size())
+            # return
 
-                args.structure = structure
-                sel_reg = SelectionBasedRegularization(args)
+            args.structure = structure
+            sel_reg = SelectionBasedRegularization(args)
 
-                if args.pruning_method == 'flops':
-                    size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnetbb(model)
-                    resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
-                                                           size_outchannel, w=args.reg_w, HN=True,structure=structure)
-                # elif args.pruning_method == 'channels':
-                #     resource_reg = Channel_constraint(args.p, w=args.reg_w)
-            elif args.arch == 'resnet101':
-                if args.gates == 2:
-                    gate_string = '_2gates'
-                else:
-                    gate_string = ''
-                # args.model_name = 'resnet'
-                # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
-                # model.load_state_dict(state_dict['state_dict'])
-                model = my_resnet101()
-                args.model_name = 'resnet'
-                args.block_string = model.block_string
-
-                width, structure = model.count_structure()
-
-                hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
-
-                hyper_net.cuda()
-                print_model_param_flops(model)
-
-                args.structure = structure
-                sel_reg = SelectionBasedRegularization(args)
-
+            if args.pruning_method == 'flops':
                 size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnetbb(model)
                 resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
-                                                          size_outchannel, w=args.reg_w, HN=True,structure=structure)
-            elif args.arch == 'resnet34':
-                if args.gates == 2:
-                    gate_string = '_2gates'
-                else:
-                    gate_string = ''
-                # args.model_name = 'resnet'
-                # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
-                # model.load_state_dict(state_dict['state_dict'])
-                model = my_resnet34(num_gate=1)
-                args.model_name = 'resnet'
-                args.block_string = model.block_string
+                                                       size_outchannel, w=args.reg_w, HN=True,structure=structure)
+            # elif args.pruning_method == 'channels':
+            #     resource_reg = Channel_constraint(args.p, w=args.reg_w)
+        elif args.arch == 'resnet101':
+            if args.gates == 2:
+                gate_string = '_2gates'
+            else:
+                gate_string = ''
+            # args.model_name = 'resnet'
+            # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
+            # model.load_state_dict(state_dict['state_dict'])
+            model = my_resnet101()
+            args.model_name = 'resnet'
+            args.block_string = model.block_string
+
+            width, structure = model.count_structure()
+
+            hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
+
+            hyper_net.cuda()
+            print_model_param_flops(model)
+
+            args.structure = structure
+            sel_reg = SelectionBasedRegularization(args)
+
+            size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnetbb(model)
+            resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
+                                                      size_outchannel, w=args.reg_w, HN=True,structure=structure)
+        elif args.arch == 'resnet34':
+            if args.gates == 2:
+                gate_string = '_2gates'
+            else:
+                gate_string = ''
+            # args.model_name = 'resnet'
+            # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
+            # model.load_state_dict(state_dict['state_dict'])
+            model = my_resnet34(num_gate=1)
+            args.model_name = 'resnet'
+            args.block_string = model.block_string
 
 
-                width, structure = model.count_structure()
-                hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
+            width, structure = model.count_structure()
+            hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
 
-                args.structure = structure
-                sel_reg = SelectionBasedRegularization(args)
+            args.structure = structure
+            sel_reg = SelectionBasedRegularization(args)
 
-                hyper_net.cuda()
-                print_model_param_flops(model)
-                size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnet(model)
-                resource_reg = Flops_constraint_resnet(args.p, size_kernel, size_out, size_group, size_inchannel,
-                                                          size_outchannel, w=args.reg_w, HN=True,structure=structure)
+            hyper_net.cuda()
+            print_model_param_flops(model)
+            size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnet(model)
+            resource_reg = Flops_constraint_resnet(args.p, size_kernel, size_out, size_group, size_inchannel,
+                                                      size_outchannel, w=args.reg_w, HN=True,structure=structure)
 
-            args.selection_reg = sel_reg
-            args.resource_constraint = resource_reg
+        args.selection_reg = sel_reg
+        args.resource_constraint = resource_reg
 
-        elif args.stage == 'baseline':
-            if args.arch == 'resnet50':
-                model = my_resnet50()
-                #state_dict = torch.load('./checkpoint/%s_new.pt' % (args.arch))
-                #model.load_state_dict(state_dict['state_dict'])
+    elif args.stage == 'baseline':
+        if args.arch == 'resnet50':
+            model = my_resnet50()
+            #state_dict = torch.load('./checkpoint/%s_new.pt' % (args.arch))
+            #model.load_state_dict(state_dict['state_dict'])
 
 
     if args.gpu is not None:
