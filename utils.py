@@ -1590,7 +1590,8 @@ def mixup_func(input, target, alpha=0.2):
     perm = torch.randperm(input.size(0))
     perm_input = input[perm]
     perm_target = target[perm]
-    return input.mul_(gamma).add_(1 - gamma, perm_input), target.mul_(gamma).add_(1 - gamma, perm_target)
+    # return input.mul_(gamma).add_(1 - gamma, perm_input), target.mul_(gamma).add_(1 - gamma, perm_target)
+    return input.mul_(gamma).add_(perm_input, alpha=1 - gamma), target.mul_(gamma).add_(perm_target, alpha=1 - gamma)
 
 
 def group_weight(module, wegith_norm=True):

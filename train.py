@@ -281,7 +281,6 @@ def one_step_hypernet(inputs, targets, net, hyper_net, args):
 
 def one_step_net(inputs, targets, net, masks, args):
 
-
     targets = one_hot(targets, num_classes=1000, smoothing_eps=0.1)
 
     if args.mix_up:
@@ -336,7 +335,6 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
     # sumres_loss = 0
     end = time.time()
 
-
     with torch.no_grad():
         hyper_net.eval()
         vector = hyper_net()  # a vector 
@@ -353,12 +351,10 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
         optimizer.zero_grad()
         sel_loss, loss, outputs = one_step_net(input, target, model, masks, args)
 
-        # if args.project == 'oto':
-        #     model. ()
 
         optimizer.step()
-        ## project
 
+        ## project
         if epoch >= args.start_epoch_gl:
             with torch.no_grad():
                 if args.project == 'gl':
