@@ -338,6 +338,7 @@ for epoch in range(max_epoch):
         print("Training cnt", cnt)
 
         for param_group in optimizer.param_groups:
+            cur_lr = param_group["lr"]
             print("current_lr %.4f"%param_group["lr"])
         model.train()
         lr_scheduler.step()  
@@ -375,9 +376,9 @@ for epoch in range(max_epoch):
             if epoch >= args.start_epoch_gl:
                 with torch.no_grad():
                     if hasattr(model, 'module'):
-                        model.module.project_wegit(hyper_net.transfrom_output(vector), args.lmd, model.lr)
+                        model.module.project_wegit(hyper_net.transfrom_output(vector), args.lmd, cur_lr)
                     else:
-                        model.project_wegit(hyper_net.transfrom_output(vector), args.lmd, model.lr)
+                        model.project_wegit(hyper_net.transfrom_output(vector), args.lmd, cur_lr)
 
 
             if epoch >= args.start_epoch_hyper and (epoch < int(args.epochs / 2)):
