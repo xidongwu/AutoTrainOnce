@@ -113,8 +113,6 @@ parser.add_argument('--base', default=3.0, type=float)
 parser.add_argument('--interval', default=30, type=int)
 parser.add_argument('--base_p', default=1.0, type=float)
 parser.add_argument('--scratch', type=str2bool, default=False)
-#
-# parser.add_argument('--re_flag',type=str2bool, default=False)
 
 parser.add_argument('--bn_decay',type=str2bool, default=False)
 parser.add_argument('--cos_anneal',type=str2bool, default=False)
@@ -129,8 +127,6 @@ parser.add_argument('--reg_w', default=4.0, type=float)  # 4.0
 parser.add_argument('--gl_lam', default=0.0001, type=float)
 parser.add_argument('--start_epoch_hyper', default=20, type=int)
 parser.add_argument('--start_epoch_gl', default=100, type=int)
-
-
 
 parser.add_argument('--lr-step-size', default=30, type=int, help='decrease lr every step-size epochs')
 parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
@@ -165,245 +161,110 @@ def main():
     print(args)
     global best_acc1
 
-    # create model
-    if args.pretrained:
-        print("=> using pre-trained model '{}'".format(args.arch))
-        model = models.__dict__[args.arch](pretrained=True)
-    else:
-        print("=> creating model '{}'".format(args.arch))
-        #model = models.__dict__[args.arch]()
-        #model = ResNet34()
-        if args.stage == 'train-gate':
-            print("None")
-            if args.arch == 'resnet50':
-                if args.gates == 2:
-                    gate_string = '_2gates'
-                else:
-                    gate_string = ''
+    # # create model
+    # if args.pretrained:
+    #     print("=> using pre-trained model '{}'".format(args.arch))
+    #     model = models.__dict__[args.arch](pretrained=True)
+    # else:
+    print("=> creating model '{}'".format(args.arch))
+    #model = models.__dict__[args.arch]()
+    #model = ResNet34()
+    if args.stage == 'train-gate':
+        print("None")
+        if args.arch == 'resnet50':
+            if args.gates == 2:
+                gate_string = '_2gates'
+            else:
+                gate_string = ''
 
-                # state_dict = torch.load('./checkpoint/%s_base%s.pt'%(args.arch, gate_string))
-                # model.load_state_dict(state_dict['state_dict'])
+            # state_dict = torch.load('./checkpoint/%s_base%s.pt'%(args.arch, gate_string))
+            # model.load_state_dict(state_dict['state_dict'])
+            if args.pretrained:
+                print(">>>>>>>>> Using Pretrained Model <<<<<<<<<<<<<")
+                model = my_resnet50(pretrained=True)
+            else:
+                print(">>>>>>>>> NO Pretrained Model <<<<<<<<<<<<<")
                 model = my_resnet50()
-                args.model_name = 'resnet'
-                args.block_string = model.block_string
+            args.model_name = 'resnet'
+            args.block_string = model.block_string
 
-                print_model_param_flops(model) #
+            print_model_param_flops(model) #
 
-                width, structure = model.count_structure()
+            width, structure = model.count_structure()
 
-                hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
-                hyper_net.cuda()
-                tmp = hyper_net()
-                print("Mask", tmp, tmp.size())
-                # return
+            hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
+            hyper_net.cuda()
+            tmp = hyper_net()
+            print("Mask", tmp, tmp.size())
+            # return
 
-                args.structure = structure
-                sel_reg = SelectionBasedRegularization(args)
+            args.structure = structure
+            sel_reg = SelectionBasedRegularization(args)
 
-                if args.pruning_method == 'flops':
-                    size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnetbb(model)
-                    resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
-                                                           size_outchannel, w=args.reg_w, HN=True,structure=structure)
-                # elif args.pruning_method == 'channels':
-                #     resource_reg = Channel_constraint(args.p, w=args.reg_w)
-            elif args.arch == 'resnet101':
-                if args.gates == 2:
-                    gate_string = '_2gates'
-                else:
-                    gate_string = ''
-                # args.model_name = 'resnet'
-                # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
-                # model.load_state_dict(state_dict['state_dict'])
-                model = my_resnet101()
-                args.model_name = 'resnet'
-                args.block_string = model.block_string
-
-                width, structure = model.count_structure()
-
-                hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
-
-                hyper_net.cuda()
-                print_model_param_flops(model)
-
-                args.structure = structure
-                sel_reg = SelectionBasedRegularization(args)
-
+            if args.pruning_method == 'flops':
                 size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnetbb(model)
                 resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
-                                                          size_outchannel, w=args.reg_w, HN=True,structure=structure)
-            elif args.arch == 'resnet34':
-                if args.gates == 2:
-                    gate_string = '_2gates'
-                else:
-                    gate_string = ''
-                # args.model_name = 'resnet'
-                # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
-                # model.load_state_dict(state_dict['state_dict'])
-                model = my_resnet34(num_gate=1)
-                args.model_name = 'resnet'
-                args.block_string = model.block_string
+                                                       size_outchannel, w=args.reg_w, HN=True,structure=structure)
+            # elif args.pruning_method == 'channels':
+            #     resource_reg = Channel_constraint(args.p, w=args.reg_w)
+        elif args.arch == 'resnet101':
+            if args.gates == 2:
+                gate_string = '_2gates'
+            else:
+                gate_string = ''
+            # args.model_name = 'resnet'
+            # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
+            # model.load_state_dict(state_dict['state_dict'])
+            model = my_resnet101()
+            args.model_name = 'resnet'
+            args.block_string = model.block_string
+
+            width, structure = model.count_structure()
+
+            hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
+
+            hyper_net.cuda()
+            print_model_param_flops(model)
+
+            args.structure = structure
+            sel_reg = SelectionBasedRegularization(args)
+
+            size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnetbb(model)
+            resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
+                                                      size_outchannel, w=args.reg_w, HN=True,structure=structure)
+        elif args.arch == 'resnet34':
+            if args.gates == 2:
+                gate_string = '_2gates'
+            else:
+                gate_string = ''
+            # args.model_name = 'resnet'
+            # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
+            # model.load_state_dict(state_dict['state_dict'])
+            model = my_resnet34(num_gate=1)
+            args.model_name = 'resnet'
+            args.block_string = model.block_string
 
 
-                width, structure = model.count_structure()
-                hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
+            width, structure = model.count_structure()
+            hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
 
-                args.structure = structure
-                sel_reg = SelectionBasedRegularization(args)
+            args.structure = structure
+            sel_reg = SelectionBasedRegularization(args)
 
-                hyper_net.cuda()
-                print_model_param_flops(model)
-                size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnet(model)
-                resource_reg = Flops_constraint_resnet(args.p, size_kernel, size_out, size_group, size_inchannel,
-                                                          size_outchannel, w=args.reg_w, HN=True,structure=structure)
+            hyper_net.cuda()
+            print_model_param_flops(model)
+            size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnet(model)
+            resource_reg = Flops_constraint_resnet(args.p, size_kernel, size_out, size_group, size_inchannel,
+                                                      size_outchannel, w=args.reg_w, HN=True,structure=structure)
 
-#             elif args.arch == 'mobnetv2':
-#                 # if args.gates == 2:
-#                 #     gate_string = '_2gates'
-#                 # else:
-#                 #     gate_string = ''
+        args.selection_reg = sel_reg
+        args.resource_constraint = resource_reg
 
-#                 # if args.re_flag:
-#                 #     model_name = args.arch + '-' + str(args.base_p)
-#                 #     state_dict = torch.load('./checkpoint/%s_new.pt' % (model_name))
-#                 #     cfg = state_dict['cfg']
-#                 #
-#                 #     ft_state_dict = torch.load('./checkpoint/%s_ft.pth.tar' % (model_name))
-#                 #
-#                 #     model_org = mobilenet_v2(custom_cfg=True, cfgs=cfg)
-#                 #     model_org.load_state_dict(ft_state_dict['state_dict'])
-#                 #
-#                 #     model = my_mobilenet_v2(custom_cfg=True, cfgs=cfg)
-#                 #     # if args.scratch is False:
-#                 #
-#                 #
-#                 #     transfer_weights(model_org, model)
-#                 #     p = args.p/args.base_p
-#                 #     print(p)
-#                 #
-#                 # else:
-#                 #
-#                 #     state_dict = torch.load('./checkpoint/%s_base.pt' % (args.arch))
-#                 model = my_mobilenet_v2()
-#                     # model.load_state_dict(state_dict['state_dict'])
-#                 p = args.p
-#                 args.model_name = 'mobnetv2'
-
-#                 width, structure = model.count_structure()
-#                 # print(args.base)
-
-#                 args.structure = structure
-#                 hyper_net = HyperStructure(structure=structure, T=0.4,base=args.base, args=args)
-#                 sel_reg = SelectionBasedRegularization_MobileNet(args)
-
-#                 print_model_param_flops(model)
-#                 hyper_net.cuda()
-#                 size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_mobnet(
-#                     model, input_res=224)
-#                 resource_reg = Flops_constraint_mobnet(p, size_kernel, size_out, size_group, size_inchannel,
-#                                                           size_outchannel, w=args.reg_w, HN=True,structure=structure)
-
-#             elif args.arch == 'mobnetv3':
-#                 # state_dict = torch.load('./checkpoint/%s_base.pt' % (args.arch))
-#                 args.model_name = 'mobnetv3'
-#                 model = my_mobilenetv3()
-#                 # model.load_state_dict(state_dict['state_dict'])
-#                 width, structure = model.count_structure()
-#                 print(args.base)
-
-#                 print_model_param_flops(model)
-
-#                 all_dict = get_middle_Fsize_mobnetv3(
-#                     model, input_res=224)
-#                 resource_reg = Flops_constraint_mobnetv3(args.p, all_dict, w=args.reg_w, HN=True,structure=structure)
-
-#                 args.structure = structure
-#                 args.se_list = all_dict['se_list']
-#                 hyper_net = HyperStructure(structure=structure, T=0.4, base=args.base, args=args)
-#                 sel_reg = SelectionBasedRegularization_MobileNetV3(args)
-#                 hyper_net.cuda()
-
-            args.selection_reg = sel_reg
-            args.resource_constraint = resource_reg
-#         elif args.stage == 'finetune':
-#             if args.arch == 'resnet50':
-#                 if args.gates == 2:
-#                     gate_string = '_2gate'
-#                 else:
-#                     gate_string = ''
-#                 print('./checkpoint/%s%s_new.pt' % (args.arch, gate_string))
-
-#                 state_dict = torch.load('./checkpoint/%s%s_new.pt' % (args.arch, gate_string))
-
-#                 cfg = state_dict['cfg']
-#                 model = my_resnet50(cfg=cfg)
-#                 if args.scratch is False:
-#                     model.load_state_dict(state_dict['state_dict'])
-
-#             elif args.arch == 'resnet101':
-#                 if args.gates == 2:
-#                     gate_string = '_2gate'
-#                 else:
-#                     gate_string = ''
-#                 print('./checkpoint/%s%s_new.pt' % (args.arch, gate_string))
-
-#                 state_dict = torch.load('./checkpoint/%s%s_new.pt' % (args.arch, gate_string))
-#                 cfg = state_dict['cfg']
-#                 model = my_resnet101(cfg=cfg)
-#                 if args.scratch is False:
-#                     model.load_state_dict(state_dict['state_dict'])
-
-#             elif args.arch == 'resnet34':
-#                 if args.gates == 2:
-#                     gate_string = '_2gate'
-#                 else:
-#                     gate_string = ''
-#                 state_dict = torch.load('./checkpoint/%s%s_new.pt' % (args.arch, gate_string))
-#                 cfg = state_dict['cfg']
-#                 model = my_resnet34(cfg=cfg, num_gate=0)
-#                 if args.scratch is False:
-#                     model.load_state_dict(state_dict['state_dict'])
-#                 #model.set_training_flag(False)
-
-#             elif args.arch == 'mobnetv2':
-#                 # if args.gates == 2:
-#                 #     gate_string = '_2gates'
-#                 # else:
-#                 #     gate_string = ''
-#                 #print('./checkpoint/%s%s_new.pt' % (args.arch, gate_string))
-#                 model_name = args.arch + '-' + str(args.p)
-#                 state_dict = torch.load('./checkpoint/%s_new.pt' % (model_name))
-#                 cfg = state_dict['cfg']
-
-#                 model = mobilenet_v2(custom_cfg=True, cfgs=cfg)
-#                 if args.scratch is False:
-#                     model.load_state_dict(state_dict['state_dict'])
-
-#             elif args.arch == 'mobnetv3':
-#                 model_name = args.arch
-#                 state_dict = torch.load('./checkpoint/%s_new.pt' % (model_name))
-#                 cfg = state_dict['cfg']
-#                 model = mobilenetv3(custom_cfg=True, mobile_setting=cfg, dropout=0.0)
-
-#                 if args.scratch is False:
-#                     model.load_state_dict(state_dict['state_dict'])
-
-#                 #raise NotImplementedError
-#             elif args.arch == 'densenet201':
-#                 if args.gates == 2:
-#                     gate_string = '_2gates'
-#                 else:
-#                     gate_string = ''
-#                 state_dict = torch.load('./checkpoint/%s%s_new.pt' % (args.arch, gate_string))
-#                 cfg = state_dict['cfg']
-#                 model = densenet201(cfg=cfg, memory_efficient=True)
-#                 if args.scratch is False:
-#                     model.load_state_dict(state_dict['state_dict'])
-
-        elif args.stage == 'baseline':
-            if args.arch == 'resnet50':
-                model = my_resnet50()
-                #state_dict = torch.load('./checkpoint/%s_new.pt' % (args.arch))
-                #model.load_state_dict(state_dict['state_dict'])
+    elif args.stage == 'baseline':
+        if args.arch == 'resnet50':
+            model = my_resnet50()
+            #state_dict = torch.load('./checkpoint/%s_new.pt' % (args.arch))
+            #model.load_state_dict(state_dict['state_dict'])
 
 
     if args.gpu is not None:
@@ -516,29 +377,6 @@ def main():
 
         print(base_sch)
 
-#     if args.resume:
-#         if os.path.isfile(args.resume):
-#             print("=> loading checkpoint '{}'".format(args.resume))
-#             checkpoint = torch.load(args.resume)
-#             args.start_epoch = checkpoint['epoch']
-#             best_acc1 = checkpoint['best_acc1']
-#             if args.gpu is not None:
-#                 # best_acc1 may be from a checkpoint from a different GPU
-#                 best_acc1 = best_acc1.to(args.gpu)
-
-#             if isinstance(model, nn.DataParallel):
-#                 #model.module.set_training_flag(False)
-#                 model.module.load_state_dict(checkpoint['state_dict'])
-#             else:
-#                 model.load_state_dict(checkpoint['state_dict'])
-#             #model.load_state_dict(checkpoint['state_dict'])
-
-
-#             optimizer.load_state_dict(checkpoint['optimizer'])
-#             print("=> loaded checkpoint '{}' (epoch {})"
-#                   .format(args.resume, checkpoint['epoch']))
-#         else:
-#             print("=> no checkpoint found at '{}'".format(args.resume))
 
     cudnn.benchmark = True
 
@@ -549,21 +387,17 @@ def main():
                                      std=[0.229, 0.224, 0.225])
 
     if  args.stage == 'train-gate':
-#         # jittering = ColorJitter(brightness=0.4, contrast=0.4,
-#         #                               saturation=0.4)
-#         # lighting = Lighting(alphastd=0.1,
-#         #                           eigval=[0.2175, 0.0188, 0.0045],
-#         #                           eigvec=[[-0.5675, 0.7192, 0.4009],
-#         #                                   [-0.5808, -0.0045, -0.8140],
-#         #                                   [-0.5836, -0.6948, 0.4203]])
         train_dataset = datasets.ImageFolder(
             traindir,
             transforms.Compose([
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                # jittering,
-                # lighting,
+                transforms.ColorJitter(
+                        brightness=0.4,
+                        contrast=0.4,
+                        saturation=0.4,
+                        hue=0.2),
                 normalize,
             ]))
 
@@ -637,39 +471,15 @@ def main():
         # for param_group in optimizer.param_groups:
             model.lr = param_group["lr"]
 
-#         if args.stage == 'finetune':
-#             if version.parse(torch.__version__) <= version.parse("1.1.0"):
-#                 scheduler.step()
-
 #         # train for one epoch
         if args.stage == 'train-gate':
-            # print("None")
-            #acc1 = validate(val_loader, model, criterion, args)
-
-            # train_hyperp(val_loader_gate, model, criterion, optimizer, optimizer_p, epoch, args, resource_reg,
-            #              hyper_net=hyper_net, pp_net=pp_net)
-            # if args.p_p:
-            #     current_p = current_p - int_step
-            #     if current_p < args.p:
-            #         current_p = args.p
-            #     resource_reg.p = current_p
-            #     print(resource_reg.p)
-            # train_epm(val_loader_gate, model, criterion, optimizer, optimizer_p, epoch, args, resource_reg,
-            #           hyper_net=hyper_net, pp_net=pp_net, epm=ep_mem, ep_bn=64)
             soft_train(train_loader, model, hyper_net, criterion, val_loader_gate, optimizer, optimizer_hyper, epoch, args)
             scheduler.step()
             scheduler_hyper.step()
 
-#         elif args.stage == 'finetune':
-#             simple_train(train_loader, model, criterion, optimizer, epoch, args)
         elif args.stage == 'baseline':
             simple_train(train_loader, model, criterion, optimizer, epoch, args)
             scheduler.step()
-
-#         if args.stage == 'finetune':
-#             if version.parse(torch.__version__) > version.parse("1.1.0"):
-#                 print("scheduler step")
-#                 scheduler.step()
 
 #         # evaluate on validation set
         if args.stage == 'train-gate':
@@ -708,106 +518,5 @@ def main():
 
         else:
             acc1 = validate(val_loader, model, criterion, args)
-
-#         # remember best acc@1 and save checkpoint
-#         is_best = acc1 > best_acc1
-#         best_acc1 = max(acc1, best_acc1)
-#         if args.stage == 'train-gate':
-
-#             if isinstance(model, torch.nn.DataParallel):
-#                 save_checkpoint({
-#                     'epoch': epoch + 1,
-#                     'arch': args.arch,
-#                     'state_dict': model.module.state_dict(),
-#                     'best_acc1': best_acc1,
-#                     'optimizer' : optimizer.state_dict(),
-#                     'hyper_net':hyper_net.state_dict(),
-#                 }, is_best, args)
-#             else:
-#                 save_checkpoint({
-#                     'epoch': epoch + 1,
-#                     'arch': args.arch,
-#                     'state_dict': model.state_dict(),
-#                     'best_acc1': best_acc1,
-#                     'optimizer': optimizer.state_dict(),
-#                     'hyper_net': hyper_net.state_dict(),
-#                 }, is_best, args)
-#         else:
-#             if isinstance(model, torch.nn.DataParallel):
-#                 save_checkpoint({
-#                     'epoch': epoch + 1,
-#                     'arch': args.arch,
-#                     'state_dict': model.module.state_dict(),
-#                     'best_acc1': best_acc1,
-#                     'optimizer' : optimizer.state_dict(),
-#                 }, is_best, args)
-#             else:
-#                 save_checkpoint({
-#                     'epoch': epoch + 1,
-#                     'arch': args.arch,
-#                     'state_dict': model.state_dict(),
-#                     'best_acc1': best_acc1,
-#                     'optimizer': optimizer.state_dict(),
-#                 }, is_best, args)
-
-
-# def adjust_learning_rate(optimizer, epoch, args, interval=30):
-#     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-#     lr = args.lr * (0.1 ** (epoch // interval))
-#     for param_group in optimizer.param_groups:
-#         param_group['lr'] = lr
-#         print(lr)
-#     return lr
-
-# #0.98
-# def adjust_learning_rate_mb(optimizer, args):
-#     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-#     lr = 0.98*args.lr
-#     for param_group in optimizer.param_groups:
-#         param_group['lr'] = lr
-#         print(lr)
-#     args.lr = lr
-
-# # def adjust_learning_rate_swa(optimiizer, epoch, args):
-# #     alpha_1 = 1e-3
-# #     alpha_2 = 1e-4
-# #     t = epoch%args.swa_c
-# #
-# #     lr = alpha_1*t + alpha_2*(1-t)
-# #     for param_group in optimiizer.param_groups:
-# #         param_group['lr'] = lr
-# #         print(lr)
-
-# def save_checkpoint(state, is_best, args, epochs=None):
-#     stage_string = ''
-#     if args.stage == 'train-gate':
-#         stage_string = 'gate'
-#     elif args.stage == 'finetune':
-#         stage_string = 'ft'
-#     elif args.stage == 'baseline':
-#         stage_string = 'base'
-
-
-#     if args.arch == 'mobnetv2':
-#         arch_str = args.arch + '-'+ str(args.p)
-#     else:
-#         arch_str = args.arch
-
-#     gate_string = ''
-#     if args.gates == 2:
-#         gate_string = '_2gates'
-#     if epochs is not None:
-#         epoch_string = str(epochs)
-#     else:
-#         epoch_string = ''
-
-#     import os
-#     os.makedirs('./checkpoint/', exist_ok=True)
-
-#     filename = './checkpoint/%s%s%s.pth.tar' % (arch_str+'_'+stage_string,gate_string,epoch_string)
-#     torch.save(state, filename)
-#     if is_best:
-#         shutil.copyfile(filename, './checkpoint/%s_best%s.pth.tar'%(args.arch+'_'+stage_string,gate_string))
-
 if __name__ == '__main__':
     main()
