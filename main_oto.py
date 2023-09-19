@@ -324,9 +324,10 @@ _, val_gate_dataset = random_split(
     train_dataset,
     lengths=[len(train_dataset) - int(ratio * len(train_dataset)), int(ratio * len(train_dataset))]
 )
-val_loader_gate = MultiEpochsDataLoader(
+valid_loader = MultiEpochsDataLoader(
     val_gate_dataset, batch_size=args.batch_size, shuffle=True,
     num_workers=args.workers, pin_memory=True,)
+
 
 args.start_epoch_gl = 15
 args.start_epoch_hyper = 15
@@ -344,12 +345,14 @@ for epoch in range(max_epoch):
         lr_scheduler.step()  
         scheduler_hyper.step()
 
-        with torch.no_grad():
-            hyper_net.eval()
-            vector = hyper_net()  # a vector 
-            masks = hyper_net.vector2mask(vector)
 
-        for X, y in trainloader:
+        if epoch < int(args.epochs / 2):
+            with torch.no_grad():
+                hyper_net.eval()
+                vector = hyper_net()  # a vector 
+                masks = hyper_net.vector2mask(vector)
+
+        for i, (X, y) in enumerate(trainloader):
 
             X = X.cuda()
             y = y.cuda()
@@ -383,6 +386,8 @@ for epoch in range(max_epoch):
 
             if epoch >= args.start_epoch_hyper and (epoch < int(args.epochs / 2)):
                 if (i + 1) % args.hyper_step == 0:
+                # if (i) % args.hyper_step == 0:
+                    # print("Hypernet Training")
                     val_inputs, val_targets = next(iter(valid_loader))
                     if args.gpu is not None:
                         val_inputs = val_inputs.cuda(args.gpu, non_blocking=True)
@@ -398,6 +403,8 @@ for epoch in range(max_epoch):
                         model.module.reset_gates()
                     else:
                         model.reset_gates()
+
+            # break
 
         accuracy1, accuracy5 = check_accuracy(model, testloader)
         f_avg_val = f_avg_val.cpu().item() / len(trainloader)

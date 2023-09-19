@@ -314,7 +314,7 @@ def one_step_net(inputs, targets, net, masks, args):
 
     return sel_loss, loss, outputs
 
-def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimizer, optimizer_hyper, epoch, args):
+def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimizer, optimizer_hyper, epoch, cur_maskVec, args):
 
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
@@ -335,9 +335,14 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
     # sumres_loss = 0
     end = time.time()
 
-    with torch.no_grad():
-        hyper_net.eval()
-        vector = hyper_net()  # a vector 
+    if epoch < int((args.epochs - 5)/ 2) + 5:
+        with torch.no_grad():
+            hyper_net.eval()
+            vector = hyper_net()  # a vector 
+            masks = hyper_net.vector2mask(vector)
+    else:
+        print(">>>>> Using fixed mask")
+        vector = cur_maskVec
         masks = hyper_net.vector2mask(vector)
 
     for i, (input, target) in enumerate(train_loader):
@@ -407,6 +412,8 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
             hyper_net.eval()
             vector = hyper_net()
             display_structure(hyper_net.transfrom_output(vector))
+
+    return vector
 
 def simple_validate(val_loader, model, criterion):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -493,10 +500,9 @@ def validate(val_loader, model, criterion, args):
     return top1.avg
 
 
-def validateMask(val_loader, model, hyper_net, criterion, args):
+def validateMask(val_loader, model, cur_maskVec, criterion, args):
 
-    hyper_net.eval()
-    vector = hyper_net.resource_output()
+    vector = cur_maskVec
 
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -547,6 +553,7 @@ def validateMask(val_loader, model, hyper_net, criterion, args):
         model.reset_gates()
 
     return top1.avg
+
 
 
 class AverageMeter(object):

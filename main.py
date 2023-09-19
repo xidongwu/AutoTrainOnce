@@ -463,17 +463,17 @@ def main():
 
     print('Label Smoothing: %s'%(args.ls))
     print_flops(hyper_net, args)
+    cur_maskVec = None
     # print('Cutmix: %s'%(args.cutmix))
     for epoch in range(args.start_epoch, args.epochs):
         #if args.stage != 'train-gate':
         for param_group in optimizer.param_groups:
             print("current_lr %.4f"%param_group["lr"])
-        # for param_group in optimizer.param_groups:
             model.lr = param_group["lr"]
 
 #         # train for one epoch
         if args.stage == 'train-gate':
-            soft_train(train_loader, model, hyper_net, criterion, val_loader_gate, optimizer, optimizer_hyper, epoch, args)
+            cur_maskVec = soft_train(train_loader, model, hyper_net, criterion, val_loader_gate, optimizer, optimizer_hyper, epoch, cur_maskVec, args)
             scheduler.step()
             scheduler_hyper.step()
 
@@ -484,29 +484,25 @@ def main():
 #         # evaluate on validation set
         if args.stage == 'train-gate':
             print("None")
-            remain_epochs = args.epochs - 5
             if (epoch+1)%10 == 0:
                 if epoch >= args.start_epoch_gl:
-                    acc1 = validateMask(val_loader, model, hyper_net, criterion, args)
+                    acc1 = validateMask(val_loader, model, cur_maskVec, criterion, args)
                 else:
                     acc1 = validate(val_loader, model, criterion, args)
                 print_flops(hyper_net, args)
-            elif epoch >= int(( remain_epochs- 10) / 3 * 2):
-                if epoch >= args.start_epoch_gl:
-                    acc1 = validateMask(val_loader, model, hyper_net, criterion, args)
-                else:
-                    acc1 = validate(val_loader, model, criterion, args)
+            elif epoch >= int((args.epochs - 5) / 3 * 2):
+                # if epoch >= args.start_epoch_gl:
+                print("Testing masked")
+                acc1 = validateMask(val_loader, model, cur_maskVec, criterion, args)
+
+                print("Testing ")
+                acc1 = validate(val_loader, model, criterion, args)
 
                 print_flops(hyper_net, args)
-            elif epoch == args.epochs-1:
-                if epoch >= args.start_epoch_gl:
-                    acc1 = validateMask(val_loader, model, hyper_net, criterion, args)
-                else:
-                    acc1 = validate(val_loader, model, criterion, args)
-                print_flops(hyper_net, args)
+
             elif epoch == 0:
                 if epoch >= args.start_epoch_gl:
-                    acc1 = validateMask(val_loader, model, hyper_net, criterion, args)
+                    acc1 = validateMask(val_loader, model, cur_maskVec, criterion, args)
                 else:
                     acc1 = validate(val_loader, model, criterion, args)
                 print_flops(hyper_net, args)
