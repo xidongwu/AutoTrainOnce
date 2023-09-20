@@ -52,7 +52,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50')
                     #     ' (default: resnet18)')
 parser.add_argument('-j', '--workers', default=8, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=90, type=int, metavar='N',
+parser.add_argument('--epochs', default=120, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -387,7 +387,7 @@ for epoch in range(max_epoch):
             if epoch >= args.start_epoch_hyper and (epoch < int(args.epochs / 2)):
                 if (i + 1) % args.hyper_step == 0:
                 # if (i) % args.hyper_step == 0:
-                    # print("Hypernet Training")
+                #     print("Hypernet Training")
                     val_inputs, val_targets = next(iter(valid_loader))
                     if args.gpu is not None:
                         val_inputs = val_inputs.cuda(args.gpu, non_blocking=True)
@@ -404,6 +404,8 @@ for epoch in range(max_epoch):
                     else:
                         model.reset_gates()
 
+
+            # print("let's breaking yixia")
             # break
 
         accuracy1, accuracy5 = check_accuracy(model, testloader)
