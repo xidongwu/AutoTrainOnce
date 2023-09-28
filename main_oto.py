@@ -283,7 +283,8 @@ def one_step_hypernet(inputs, targets, net, hyper_net, args):
 params_group = group_weight(hyper_net)
 print("params_group = group_weight(hyper_net)", len(list(hyper_net.parameters())))
 optimizer_hyper = torch.optim.AdamW(params_group, lr=1e-3, weight_decay=1e-2)
-scheduler_hyper = torch.optim.lr_scheduler.MultiStepLR(optimizer_hyper, milestones=[int(0.98 * (args.epochs) / 2)], gamma=0.1)
+# scheduler_hyper = torch.optim.lr_scheduler.MultiStepLR(optimizer_hyper, milestones=[int(0.98 * (args.epochs) / 2)], gamma=0.1)
+scheduler_hyper = torch.optim.lr_scheduler.MultiStepLR(optimizer_hyper, milestones=[int(0.98 * args.epochs)], gamma=0.1)
 
 label_smooth = True
 mix_up = True
@@ -329,22 +330,38 @@ valid_loader = MultiEpochsDataLoader(
     num_workers=args.workers, pin_memory=True,)
 
 
-args.start_epoch_gl = 15
-args.start_epoch_hyper = 15
+startingEpoch = 15
+args.start_epoch_gl = startingEpoch
+args.start_epoch_hyper = startingEpoch
 
 for epoch in range(max_epoch):
     f_avg_val = 0.0
+    lr_scheduler.step()  
+    scheduler_hyper.step()
+
+    for param_group in optimizer.param_groups:
+        cur_lr = param_group["lr"]
+        print("current_lr %.4f"%param_group["lr"])
+
     for t in range(train_time):
         cnt += 1
         print("Training cnt", cnt)
 
-        for param_group in optimizer.param_groups:
-            cur_lr = param_group["lr"]
-            print("current_lr %.4f"%param_group["lr"])
-        model.train()
-        lr_scheduler.step()  
-        scheduler_hyper.step()
+        batch_time = AverageMeter('Time', ':6.3f')
+        data_time = AverageMeter('Data', ':6.3f')
+        losses = AverageMeter('Loss', ':.4e')
+        alignments = AverageMeter('AlignmentLoss', ':.4e')
+        hyper_losses = AverageMeter('HyperLoss', ':.4e')
+        res_losses = AverageMeter('ResLoss', ':.4e')
+        top1 = AverageMeter('Acc@1', ':6.2f')
+        top5 = AverageMeter('Acc@5', ':6.2f')
+        h_top1 = AverageMeter('HAcc@1', ':6.2f')
+        h_top5 = AverageMeter('HAcc@5', ':6.2f')
+        progress = ProgressMeter(len(trainloader), batch_time, data_time, losses, alignments, top1,
+                                 top5, hyper_losses, res_losses, h_top1, h_top5, prefix="Epoch: [{}]".format(epoch))
 
+        model.train()
+        end = time.time()
 
         if epoch < int(args.epochs / 2):
             with torch.no_grad():
@@ -399,16 +416,29 @@ for epoch in range(max_epoch):
                                                                                args)
                     optimizer_hyper.step()
 
+                    h_acc1, h_acc5 = accuracy(hyper_outputs, val_targets, topk=(1, 5))
+                    h_top1.update(h_acc1[0], val_inputs.size(0))
+                    h_top5.update(h_acc5[0], val_inputs.size(0))
+                    hyper_losses.update(h_loss.item(), val_inputs.size(0))
+                    res_losses.update(res_loss.item(),val_inputs.size(0))
+
                     if hasattr(model, 'module'):
                         model.module.reset_gates()
                     else:
                         model.reset_gates()
 
+            batch_time.update(time.time() - end)
+            end = time.time()
+            if i % 100 == 0:
+                progress.print(i)
 
-            # print("let's breaking yixia")
-            # break
 
-        accuracy1, accuracy5 = check_accuracy(model, testloader)
+        if epoch >= args.start_epoch_gl:
+            print("Masked acc")
+            acc1 = validateMask(testloader, model, vector, criterion, args)
+        else:
+            acc1 = validate(testloader, model, criterion, args)
+
         f_avg_val = f_avg_val.cpu().item() / len(trainloader)
         print("Epoch: {ep}, loss: {f:.2f}, acc1: {acc:.4f}"\
-            .format(ep=epoch, f=f_avg_val, acc=accuracy1))
+            .format(ep=epoch, f=f_avg_val, acc=acc1))
