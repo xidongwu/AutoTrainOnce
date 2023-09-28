@@ -435,9 +435,9 @@ for epoch in range(max_epoch):
 
         if epoch >= args.start_epoch_gl:
             print("Masked acc")
-            acc1 = validateMask(testloader, model, vector, criterion, args)
+            acc1 = validateMask(testloader, model, vector, torch.nn.CrossEntropyLoss(), args)
         else:
-            acc1 = validate(testloader, model, criterion, args)
+            acc1 = validate(testloader, model, torch.nn.CrossEntropyLoss(), args)
 
         f_avg_val = f_avg_val.cpu().item() / len(trainloader)
         print("Epoch: {ep}, loss: {f:.2f}, acc1: {acc:.4f}"\
