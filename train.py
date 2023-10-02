@@ -334,6 +334,7 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
     model.train()
     # sumres_loss = 0
     end = time.time()
+    lmdValue = 0
 
     if epoch < int((args.epochs - 5)/ 2) + 5:
         with torch.no_grad():
@@ -413,6 +414,7 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
         if i % args.print_freq == 0:
             progress.print(i)
 
+    print("Project Lmd in this Epoch:", lmdValue)
     if epoch >= args.start_epoch:
         with torch.no_grad():
                 # resource_constraint.print_current_FLOPs(hyper_net.resource_output())
