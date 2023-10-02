@@ -69,9 +69,9 @@ class SelectionBasedRegularization(nn.Module):
             # print(w_low.size())
 
             gl_loss = (w_up     * (1 - m_out)).pow(2).sum((1,2,3)).add(1e-8).pow(1/2.).sum() \
-                    + (w_middle * (1 - mm_in)).pow(2).sum((0,2,3)).add(1e-8).pow(1/2.).sum() \
+                    # + (w_middle * (1 - mm_in)).pow(2).sum((0,2,3)).add(1e-8).pow(1/2.).sum() \
                     + (w_middle * (1 - mm_out)).pow(2).sum((1, 2, 3)).add(1e-8).pow(1 / 2.).sum() \
-                    + (w_low    * (1 - m_in)).pow(2).sum((0,2,3)).add(1e-8).pow(1/2.).sum()
+                    # + (w_low    * (1 - m_in)).pow(2).sum((0,2,3)).add(1e-8).pow(1/2.).sum()
             gl_list.append(gl_loss)
         sum_loss = self.lam * custom_grad_weight.apply(sum(gl_list)/len(gl_list), self.grad_mul)
         return sum_loss
