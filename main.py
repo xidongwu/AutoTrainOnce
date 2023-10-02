@@ -80,7 +80,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
 parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)',
                     dest='weight_decay')
-parser.add_argument('--lmd', default=1e-4, type=float, metavar='W', help='group lasso lamd (default: 1e-4)',
+parser.add_argument('--lmd', default=10, type=float, metavar='W', help='group lasso lamd (default: 10)',
                     dest='lmd')
 
 parser.add_argument('--epsilon', default=0.1, type=float, metavar='M',
@@ -490,7 +490,7 @@ def main():
                 else:
                     acc1 = validate(val_loader, model, criterion, args)
                 print_flops(hyper_net, args)
-            elif epoch >= int((args.epochs - 5) / 3 * 2):
+            elif epoch >= int((args.epochs - 5) / 3 * 2) + 5:
                 # if epoch >= args.start_epoch_gl:
                 print("Testing masked")
                 acc1 = validateMask(val_loader, model, cur_maskVec, criterion, args)
@@ -514,5 +514,52 @@ def main():
 
         else:
             acc1 = validate(val_loader, model, criterion, args)
+
+############################
+    print("Training Done")
+    if isinstance(model, torch.nn.DataParallel):
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'arch': args.arch,
+            'state_dict': model.module.state_dict(),
+            'best_acc1': best_acc1,
+            'optimizer' : optimizer.state_dict(),
+            'hyper_net':hyper_net.state_dict(),
+        }, args)
+    else:
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'arch': args.arch,
+            'state_dict': model.state_dict(),
+            'best_acc1': best_acc1,
+            'optimizer': optimizer.state_dict(),
+            'hyper_net': hyper_net.state_dict(),
+        }, args)
+    print("Svaed !!!!")
+
+def save_checkpoint(state, args, epochs=None):
+    stage_string = ''
+    if args.stage == 'train-gate':
+        stage_string = 'gate'
+    elif args.stage == 'baseline':
+        stage_string = 'base'
+
+    if args.arch == 'mobnetv2':
+        arch_str = args.arch + '-'+ str(args.p)
+    else:
+        arch_str = args.arch
+
+    if epochs is not None:
+        epoch_string = str(epochs)
+    else:
+        epoch_string = ''
+
+    import os
+    os.makedirs('./checkpoint/', exist_ok=True)
+
+    filename = './checkpoint/%s%s%s.pth.tar' % (arch_str+'_'+stage_string, str(args.lmd), epoch_string)
+    torch.save(state, filename)
+
+
 if __name__ == '__main__':
     main()

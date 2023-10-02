@@ -307,8 +307,8 @@ def one_step_net(inputs, targets, net, masks, args):
         weights = net.get_weights()
 
     ##### Group lasso remove --- Optional 
-    # sel_loss = args.selection_reg(weights, masks)
-    # loss += sel_loss
+    sel_loss = args.selection_reg(weights, masks)
+    # loss = sel_loss
 
     loss.backward()
 
@@ -356,17 +356,24 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
         optimizer.zero_grad()
         sel_loss, loss, outputs = one_step_net(input, target, model, masks, args)
 
-
         optimizer.step()
 
         ## project
         if epoch >= args.start_epoch_gl:
+            if args.lmd > 0:
+                lmdValue = args.lmd
+            elif args.lmd == 0:
+                if epoch < int((args.epochs - 5)/ 2):
+                    lmdValue = 10
+                else:
+                    lmdValue = 100 #10000000000
+
             with torch.no_grad():
                 if args.project == 'gl':
                     if hasattr(model, 'module'):
-                        model.module.project_wegit(hyper_net.transfrom_output(vector), args.lmd, model.lr)
+                        model.module.project_wegit(hyper_net.transfrom_output(vector), lmdValue, model.lr)
                     else:
-                        model.project_wegit(hyper_net.transfrom_output(vector), args.lmd, model.lr)
+                        model.project_wegit(hyper_net.transfrom_output(vector), lmdValue, model.lr)
                 elif args.project == 'oto':
                     model.oto(hyper_net.transfrom_output(vector))
 
@@ -629,5 +636,3 @@ def rand_bbox(size, lam):
     bby2 = np.clip(cy + cut_h // 2, 0, H)
 
     return bbx1, bby1, bbx2, bby2
-
-
