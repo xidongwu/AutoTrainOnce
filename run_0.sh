@@ -11,4 +11,4 @@
 
 
 # help(0.288) -> p = 0.19264250745349115
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 nohup python -u main.py --arch resnet50 --workers 16 --stage train-gate --weight-decay 5e-2 --mix_up True --p 0.193  --batch-size 1024 --lr 1e-3 --opt_name ADAMW --gates 2 --epoch 245 --start_epoch_hyper 25 --start_epoch_gl 50 --lmd 0 --grad_mul 5 --reg_w 4.0 ../model_compress/Data/ILSVRC2012/ > rn50_lmd0_28_adam_cos_jitter_mixup.txt 2>&1 &
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 nohup python -u main.py --arch resnet50 --workers 16 --stage train-gate --weight-decay 5e-2 --mix_up True --p 0.193  --batch-size 1024 --lr 1e-3 --opt_name ADAMW --gates 2 --epoch 245 --start_epoch_hyper 25 --start_epoch_gl 50 --lmd 0 --grad_mul 5 --reg_w 8.0 ../model_compress/Data/ILSVRC2012/ > rn50_lmd0_28_adam_cos_jitter_mixup.txt 2>&1 &
