@@ -307,8 +307,8 @@ def one_step_net(inputs, targets, net, masks, args):
         weights = net.get_weights()
 
     ##### Group lasso remove --- Optional 
-    # with torch.no_grad():
-    #     sel_loss = args.selection_reg(weights, masks)
+    with torch.no_grad():
+        sel_loss = args.selection_reg(weights, masks)
     # loss = sel_loss
 
     loss.backward()

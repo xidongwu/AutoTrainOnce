@@ -393,11 +393,11 @@ def main():
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                # transforms.ColorJitter(
-                #         brightness=0.4,
-                #         contrast=0.4,
-                #         saturation=0.4,
-                #         hue=0.2),
+                transforms.ColorJitter(
+                        brightness=0.4,
+                        contrast=0.4,
+                        saturation=0.4,
+                        hue=0.2),
                 normalize,
             ]))
 
