@@ -5,7 +5,7 @@ import shutil
 import time
 import warnings
 import sys
-
+import copy
 import torch
 import torch.nn as nn
 import torch.nn.parallel
@@ -393,11 +393,11 @@ def main():
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.ColorJitter(
-                        brightness=0.4,
-                        contrast=0.4,
-                        saturation=0.4,
-                        hue=0.2),
+                # transforms.ColorJitter(
+                #         brightness=0.4,
+                #         contrast=0.4,
+                #         saturation=0.4,
+                #         hue=0.2),
                 normalize,
             ]))
 
@@ -486,14 +486,14 @@ def main():
             print("None")
             if (epoch+1)%10 == 0:
                 if epoch >= args.start_epoch_gl:
-                    acc1 = validateMask(val_loader, model, cur_maskVec, criterion, args)
+                    acc1 = validateMask(val_loader, model, copy.deepcopy(cur_maskVec), criterion, args)
                 else:
                     acc1 = validate(val_loader, model, criterion, args)
                 print_flops(hyper_net, args)
             elif epoch >= int((args.epochs - 5) / 3 * 2) + 5:
                 # if epoch >= args.start_epoch_gl:
                 print("Testing masked")
-                acc1 = validateMask(val_loader, model, cur_maskVec, criterion, args)
+                acc1 = validateMask(val_loader, model, copy.deepcopy(cur_maskVec), criterion, args)
 
                 print("Testing ")
                 acc1 = validate(val_loader, model, criterion, args)
@@ -501,10 +501,8 @@ def main():
                 print_flops(hyper_net, args)
 
             elif epoch == 0:
-                if epoch >= args.start_epoch_gl:
-                    acc1 = validateMask(val_loader, model, cur_maskVec, criterion, args)
-                else:
-                    acc1 = validate(val_loader, model, criterion, args)
+                acc1 = validate(val_loader, model, criterion, args)
+                    
                 print_flops(hyper_net, args)
 
             if hasattr(model, 'module'):

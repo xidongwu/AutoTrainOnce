@@ -307,8 +307,8 @@ def one_step_net(inputs, targets, net, masks, args):
         weights = net.get_weights()
 
     ##### Group lasso remove --- Optional 
-    with torch.no_grad():
-        sel_loss = args.selection_reg(weights, masks)
+    # with torch.no_grad():
+    #     sel_loss = args.selection_reg(weights, masks)
     # loss = sel_loss
 
     loss.backward()
@@ -341,9 +341,11 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
         with torch.no_grad():
             hyper_net.eval()
             vector = hyper_net()  # a vector 
+            return_vect = copy.deepcopy(vector)
             masks = hyper_net.vector2mask(vector)
     else:
         print(">>>>> Using fixed mask")
+        return_vect = copy.deepcopy(cur_maskVec)
         vector = cur_maskVec
         masks = hyper_net.vector2mask(vector)
 
@@ -417,13 +419,17 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
 
     print("Project Lmd in this Epoch:", lmdValue)
     if epoch >= args.start_epoch:
-        with torch.no_grad():
-                # resource_constraint.print_current_FLOPs(hyper_net.resource_output())
-            hyper_net.eval()
-            vector = hyper_net()
+        if epoch < int((args.epochs - 5)/ 2) + 5: 
+            with torch.no_grad():
+                    # resource_constraint.print_current_FLOPs(hyper_net.resource_output())
+                hyper_net.eval()
+                vector = hyper_net()
+                display_structure(hyper_net.transfrom_output(vector))
+        else:
             display_structure(hyper_net.transfrom_output(vector))
 
-    return vector
+
+    return return_vect
 
 def simple_validate(val_loader, model, criterion):
     batch_time = AverageMeter('Time', ':6.3f')
