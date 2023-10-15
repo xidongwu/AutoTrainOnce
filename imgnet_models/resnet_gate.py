@@ -41,42 +41,25 @@ class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
                  base_width=64, dilation=1, norm_layer=None, cfg=None, num_gate=0):
         super(BasicBlock, self).__init__()
-        if cfg is None:
-            if norm_layer is None:
-                norm_layer = nn.BatchNorm2d
-            if groups != 1 or base_width != 64:
-                raise ValueError('BasicBlock only supports groups=1 and base_width=64')
-            if dilation > 1:
-                raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
-            # Both self.conv1 and self.downsample layers downsample the input when stride != 1
-            self.conv1 = conv3x3(inplanes, planes, stride)
-            self.bn1 = norm_layer(planes)
-            self.relu = nn.ReLU(inplace=True)
-            if num_gate==1:
-                self.gate = virtual_gate(planes)
-            self.conv2 = conv3x3(planes, planes)
-            self.bn2 = norm_layer(planes)
-            self.downsample = downsample
-            self.stride = stride
-            self.num_gate = num_gate
-        else:
-            if norm_layer is None:
-                norm_layer = nn.BatchNorm2d
-            if groups != 1 or base_width != 64:
-                raise ValueError('BasicBlock only supports groups=1 and base_width=64')
-            if dilation > 1:
-                raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
-            # Both self.conv1 and self.downsample layers downsample the input when stride != 1
-            self.conv1 = conv3x3(inplanes, cfg[0], stride)
-            self.bn1 = norm_layer(cfg[0])
-            self.relu = nn.ReLU(inplace=True)
-            if num_gate == 1:
-                self.gate = virtual_gate(cfg[0])
-            self.conv2 = conv3x3(cfg[0], planes)
-            self.bn2 = norm_layer(planes)
-            self.downsample = downsample
-            self.stride = stride
-            self.num_gate = num_gate
+
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        if groups != 1 or base_width != 64:
+            raise ValueError('BasicBlock only supports groups=1 and base_width=64')
+        if dilation > 1:
+            raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
+        # Both self.conv1 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.bn1 = norm_layer(planes)
+        self.relu = nn.ReLU(inplace=True)
+        if num_gate==1:
+            self.gate = virtual_gate(planes)
+        self.conv2 = conv3x3(planes, planes)
+        self.bn2 = norm_layer(planes)
+        self.downsample = downsample
+        self.stride = stride
+        self.num_gate = num_gate
+
     def forward(self, x):
         identity = x
 
@@ -397,6 +380,7 @@ class ResNet(nn.Module):
 
                 ratio = (1 - masks[vg_idx]).sum() / N_t
                 if ratio == 0:
+                    vg_idx += 1
                     continue
 
                 # print("Starting project")

@@ -156,11 +156,11 @@ class Flops_constraint_resnet(nn.Module):
         print('+ Number of FLOPs: %.5fG'%(total_flops/1e9))
         return total_flops
 
-    def forward(self, input):
+    def get_flops(self, input):
         c_in = self.inc_1st
         sum_flops = 0
+
         if self.HN:
-            #self.h = self.input.register_hook(lambda grad: grad)
             arch_vector = []
             start = 0
             for i in range(len(self.structure)):
@@ -171,18 +171,10 @@ class Flops_constraint_resnet(nn.Module):
                 start = end
 
             length = len(arch_vector)
-            #print(length)
         else:
             length = len(input)
         for i in range(length):
-            if self.HN is False:
-                current_tensor = custom_STE.apply(input[i], False)
-            # if i >0:
-            #     c_in = custom_STE.apply(input[i-1], False).sum()
-            else:
-                current_tensor = arch_vector[i]
-
-
+            current_tensor = arch_vector[i]
             #current_tensor = custom_STE.apply(input[i], False)
             # if i >0:
             #     c_in = custom_STE.apply(input[i-1], False).sum()
@@ -190,15 +182,19 @@ class Flops_constraint_resnet(nn.Module):
             #two layer as a group
             sum_flops+= self.k_size[2*i]*(self.in_csize[2*i]/self.g_size[2*i])*c_out*self.out_size[2*i]+3*c_out*self.out_size[2*i]
             sum_flops+= self.k_size[2*i+1]*(c_out/self.g_size[2*i+1])*self.out_csize[2*i+1]*self.out_size[2*i+1]+3*self.out_csize[2*i+1]*self.out_size[2*i+1]
+
+        return sum_flops
+
+    def forward(self, input):
+
+        sum_flops = self.get_flops(input)
         # loss = torch.log(torch.abs(sum_flops/self.t_flops - (self.p))+ 1)
 
         resource_ratio = (sum_flops / self.t_flops)
         if resource_ratio > self.p:
-            # resource_ratio = (sum_flops / self.t_flops)
             abs_rv = torch.clamp(resource_ratio, min=self.p + 0.005)
             loss = torch.log((abs_rv / (self.p)))
         else:
-            # resource_ratio = (sum_flops / self.t_flops)
             abs_rv = torch.clamp(resource_ratio, max=self.p - 0.005)
             loss = torch.log(((self.p) / abs_rv))
 
@@ -223,7 +219,6 @@ class Flops_constraint_resnet_bb(nn.Module):
         super(Flops_constraint_resnet_bb, self).__init__()
 
         self.p = p
-
         self.k_size = kernel_size
         self.out_size = out_size
         self.g_size = group_size
@@ -286,41 +281,10 @@ class Flops_constraint_resnet_bb(nn.Module):
                     c_in = current_tensor.sum()
                     c_out = next_tensor.sum()
 
-                sum_flops+= self.k_size[3*i]*(self.in_csize[3*i]/self.g_size[3*i]) * c_in * self.out_size[3*i] + 3* c_in *self.out_size[3*i]
+                sum_flops+= self.k_size[3*i]  *(self.in_csize[3*i]/self.g_size[3*i]) * c_in * self.out_size[3*i] + 3* c_in *self.out_size[3*i]
                 sum_flops+= self.k_size[3*i+1]*(c_in/self.g_size[3*i+1])*c_out*self.out_size[3*i+1] + 3*c_out*self.out_size[3*i+1]
                 sum_flops+= self.k_size[3*i+2]*(c_out/self.g_size[3*i+2])*self.out_csize[3*i+2]*self.out_size[3*i+2] + 3*self.out_csize[3*i+2]*self.out_size[3*i+2]
                 i+=1
-
-            #print(i)
-            #print(3*i+2)
-        # else:
-        #     for i in range(0, len(input)):
-        #         #print(i)
-
-        #         current_tensor = custom_STE.apply(input[i], False)
-
-        #         #next_tensor = custom_STE.apply(input[ind+1], False)
-        #         # if i >0:
-        #         #     c_in = custom_STE.apply(input[i-1], False).sum()
-
-        #         channels = current_tensor.sum()
-
-        #         #c_in = current_tensor.sum()
-        #         #c_out = next_tensor.sum()
-
-        #         #two layer as a group
-        #         # sum_flops+= self.k_size[3*i]*(self.in_csize[3*i]/self.g_size[3*i])*c_in*self.out_size[3*i]+3*c_in*self.out_size[3*i]
-        #         # sum_flops+= self.k_size[3*i+1]*(c_in/self.g_size[3*i+1])*c_out*self.out_size[3*i+1]+3*c_out*self.out_size[3*i+1]
-        #         # sum_flops+= self.k_size[3*i+2]*(c_out/self.g_size[3*i+2])*self.out_csize[3*i+2]*self.out_size[3*i+2]+3*self.out_csize[3*i+2]*self.out_size[3*i+2]
-        #         # i+=1
-
-        #         sum_flops += self.k_size[3 * i] * (self.in_csize[3 * i] / self.g_size[3 * i]) * channels * self.out_size[
-        #             3 * i] + 3 * channels * self.out_size[3 * i]
-        #         sum_flops += self.k_size[3 * i + 1] * (channels / self.g_size[3 * i + 1]) * channels * self.out_size[
-        #             3 * i + 1] + 3 * channels * self.out_size[3 * i + 1]
-        #         sum_flops += self.k_size[3 * i + 2] * (channels / self.g_size[3 * i + 2]) * self.out_csize[3 * i + 2] * \
-        #                      self.out_size[3 * i + 2] + 3 * self.out_csize[3 * i + 2] * self.out_size[3 * i + 2]
-        # #print(sum_flops/self.t_flops)
 
         return sum_flops
 

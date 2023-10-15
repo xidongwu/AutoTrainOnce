@@ -172,6 +172,11 @@ def main():
     if args.stage == 'train-gate':
         print("None")
         if args.arch == 'resnet50':
+# def help(ratio):
+#     tt = 3.63588
+#     t = 4.12283
+#     return (t * ratio - (t-tt)) / tt
+
             if args.gates == 2:
                 gate_string = '_2gates'
             else:
@@ -205,8 +210,6 @@ def main():
                 size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnetbb(model)
                 resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
                                                        size_outchannel, w=args.reg_w, HN=True,structure=structure)
-            # elif args.pruning_method == 'channels':
-            #     resource_reg = Channel_constraint(args.p, w=args.reg_w)
         elif args.arch == 'resnet101':
             if args.gates == 2:
                 gate_string = '_2gates'
@@ -233,6 +236,9 @@ def main():
             resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
                                                       size_outchannel, w=args.reg_w, HN=True,structure=structure)
         elif args.arch == 'resnet34':
+# + Number of FLOPs: 3.67661G
+# + Number of FLOPs: 3.53425G
+
             if args.gates == 2:
                 gate_string = '_2gates'
             else:
@@ -240,19 +246,21 @@ def main():
             # args.model_name = 'resnet'
             # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
             # model.load_state_dict(state_dict['state_dict'])
+            print("ResNet34 ready")
             model = my_resnet34(num_gate=1)
             args.model_name = 'resnet'
             args.block_string = model.block_string
 
+            print_model_param_flops(model)
 
             width, structure = model.count_structure()
+            
             hyper_net = HyperStructure(structure=structure, T=0.4, base=3,args=args)
+            hyper_net.cuda()
 
             args.structure = structure
             sel_reg = SelectionBasedRegularization(args)
 
-            hyper_net.cuda()
-            print_model_param_flops(model)
             size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnet(model)
             resource_reg = Flops_constraint_resnet(args.p, size_kernel, size_out, size_group, size_inchannel,
                                                       size_outchannel, w=args.reg_w, HN=True,structure=structure)
