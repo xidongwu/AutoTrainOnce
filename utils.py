@@ -494,6 +494,10 @@ class Flops_constraint_mobnet(nn.Module):
         self.last_flops = total_flops
         return total_flops
 
+
+    def get_flops(self, input):
+        return self.print_current_FLOPs(input)
+
     def print_current_FLOPs(self, input):
         sum_flops = 0
         #print(len(self.k_size))
@@ -540,7 +544,8 @@ class Flops_constraint_mobnet(nn.Module):
                              self.out_size[3 * i + 2] + 3 * self.out_csize[3 * i + 2] * self.out_size[3 * i + 2]
 
         print('+ Current FLOPs: %.5fG'%(sum_flops/1e9))
-
+        return sum_flops
+        
     def forward(self, input):
         #c_in = self.inc_1st
         sum_flops = 0
@@ -608,9 +613,24 @@ class Flops_constraint_mobnet(nn.Module):
         # loss = - torch.log(1 - abs_rv + 1e-8)
 
         #ratio regularization
+
+
+###############
         resource_ratio = (sum_flops / self.t_flops)
-        abs_rv = torch.clamp(resource_ratio, min=self.p)
-        loss = torch.log((abs_rv / (self.p)))
+        # abs_rv = torch.clamp(resource_ratio, min=self.p)
+        # loss = torch.log((abs_rv / (self.p)))
+        if resource_ratio > self.p:
+            abs_rv = torch.clamp(resource_ratio, min=self.p + 0.005)
+            loss = torch.log((abs_rv / (self.p)))
+        else:
+            abs_rv = torch.clamp(resource_ratio, max=self.p - 0.005)
+            loss = torch.log(((self.p) / abs_rv))
+
+
+####################3
+
+
+
 
         # resource_ratio = (sum_flops / self.t_flops)
         # abs_rv = torch.clamp(resource_ratio, min=self.p+0.01)
