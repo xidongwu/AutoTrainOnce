@@ -29,7 +29,7 @@ class SelectionBasedRegularization(nn.Module):
         self.structure = args.structure
         self.lam = args.gl_lam
         self.block_string = args.block_string
-        self.N = 1
+
     def forward(self, weights, masks):
         if self.block_string == 'BasicBlock':
             return self.basic_forward(weights, masks)

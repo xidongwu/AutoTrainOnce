@@ -21,8 +21,7 @@ import torchvision.models as models
 # #from models.resnet import ResNet34
 from imgnet_models.resnet_gate import my_resnet50, my_resnet101, my_resnet34
 # #from imgnet_models.mobilentv2 import my_mobilenet_v2, mobilenet_v2
-# #from imgnet_models.mobilentv2_custom import my_mobilenet_v2, mobilenet_v2
-# from imgnet_models.mobilenetv2_custom import my_mobilenet_v2, mobilenet_v2
+from imgnet_models.mobilenetv2_custom import my_mobilenet_v2
 # from imgnet_models.mobilenetv3 import mobilenetv3, my_mobilenetv3
 # from imgnet_models.densenet_gate import my_densenet201,densenet201
 from imgnet_models.hypernet import HyperStructure
@@ -142,21 +141,11 @@ def main():
     #     random.seed(args.seed)
     torch.manual_seed(args.seed)
     cudnn.deterministic = True
-    # warnings.warn('You have chosen to seed training. '
-#                       'This will turn on the CUDNN deterministic setting, '
-#                       'which can slow down your training considerably! '
-#                       'You may see unexpected behavior when restarting '
-#                       'from checkpoints.')
 
     if args.gpu is not None:
         warnings.warn('You have chosen a specific GPU. This will completely '
                       'disable data parallelism.')
         print("Use GPU: {} for training".format(args.gpu))
-
-#     # if args.dist_url == "env://" and args.world_size == -1:
-#     #     args.world_size = int(os.environ["WORLD_SIZE"])
-#     #
-#     # args.distributed = args.world_size > 1 or args.multiprocessing_distributed
 
     print(args)
     global best_acc1
@@ -234,10 +223,11 @@ def main():
 
             size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnetbb(model)
             resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
+                                     
                                                       size_outchannel, w=args.reg_w, HN=True,structure=structure)
-        elif args.arch == 'resnet34':
 # + Number of FLOPs: 3.67661G
 # + Number of FLOPs: 3.53425G
+        elif args.arch == 'resnet34':
 
             if args.gates == 2:
                 gate_string = '_2gates'
@@ -263,6 +253,30 @@ def main():
 
             size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_resnet(model)
             resource_reg = Flops_constraint_resnet(args.p, size_kernel, size_out, size_group, size_inchannel,
+                                                      size_outchannel, w=args.reg_w, HN=True,structure=structure)
+
+
+# 0.31413G
+# 0.27539G
+
+        elif args.arch == 'mobnetv2':
+            print("mobnetv2 ready")
+            model = my_mobilenet_v2()
+            p = args.p
+            args.model_name = 'mobnetv2'
+
+            print_model_param_flops(model)
+
+            width, structure = model.count_structure()
+
+            args.structure = structure
+            hyper_net = HyperStructure(structure=structure, T=0.4,base=args.base, args=args)
+            sel_reg = SelectionBasedRegularization_MobileNet(args)
+
+            hyper_net.cuda()
+            size_out, size_kernel, size_group, size_inchannel, size_outchannel = get_middle_Fsize_mobnet(
+                model, input_res=224)
+            resource_reg = Flops_constraint_mobnet(p, size_kernel, size_out, size_group, size_inchannel,
                                                       size_outchannel, w=args.reg_w, HN=True,structure=structure)
 
         args.selection_reg = sel_reg
@@ -390,6 +404,7 @@ def main():
 
     # Data loading code
     traindir = os.path.join(args.data, 'train')
+    # traindir = os.path.join(args.data, 'val')
     valdir = os.path.join(args.data, 'val')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])

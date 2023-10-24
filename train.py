@@ -417,6 +417,10 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
         if i % args.print_freq == 0:
             progress.print(i)
 
+
+        # if i == 200:
+        #     break
+
     print("Project Lmd in this Epoch:", lmdValue)
     if epoch >= args.start_epoch:
         if epoch < int((args.epochs - 5)/ 2) + 5: 

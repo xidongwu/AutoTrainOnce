@@ -154,7 +154,6 @@ class MobileNetV2(nn.Module):
         # setting of inverted residual blocks
 
         if custom_cfg:
-
             self.cfgs = cfgs
         else:
             self.cfgs = [
@@ -287,11 +286,74 @@ class MobileNetV2(nn.Module):
             if isinstance(m, virtual_gate):
                 m.reset_value()
 
-def mobilenet_v2(**kwargs):
-    """
-    Constructs a MobileNet V2 model
-    """
-    return MobileNetV2(**kwargs)
+    def project_wegit(self, masks, lmd, lr):
+        self.lmd, self.lr = lmd, lr
+        # print("self.lam * ratio * self.lr", self.lmd, self.lr)
+
+        N_t = 0
+        for itm in masks:
+            N_t += (1 - itm).sum()
+        # gap = 3 #2 if self.block_string == 'Bottleneck' else 
+        modules = list(self.modules())
+        weights_list = []
+        vg_idx = 0
+
+
+        for layer_id in range(len(modules)):
+            m = modules[layer_id]
+            if isinstance(m, virtual_gate):
+                ratio = (1 - masks[vg_idx]).sum() / N_t
+                if ratio == 0:
+                    vg_idx += 1
+                    continue
+
+                m_out = (masks[vg_idx] == 0)
+                vg_idx += 1
+                ## calculate group norm
+                w_norm = (modules[layer_id - 3].weight.data[m_out]).pow(2).sum((1,2,3))
+                w_norm += (modules[layer_id - 2].weight.data[m_out]).pow(2)
+                w_norm += (modules[layer_id - 2].bias.data[m_out]).pow(2)
+
+                w_norm += (modules[layer_id + 1].weight.data[m_out]).pow(2).sum((1,2,3))
+                w_norm += (modules[layer_id + 2].weight.data[m_out]).pow(2)
+                w_norm += (modules[layer_id + 2].bias.data[m_out]).pow(2)
+
+                w_norm = w_norm.add(1e-8).pow(1/2.)
+                # print("w_norm shape", w_norm.size())
+
+                modules[layer_id - 3].weight.copy_(self.groupproximal(modules[layer_id - 3].weight.data, m_out, ratio, w_norm))
+                modules[layer_id - 2].weight.copy_(self.groupproximal(modules[layer_id - 2].weight.data, m_out, ratio, w_norm))
+                modules[layer_id - 2].bias.copy_(  self.groupproximal(modules[layer_id - 2].bias.data, m_out, ratio, w_norm))
+
+                modules[layer_id + 1].weight.copy_(self.groupproximal(modules[layer_id + 1].weight.data, m_out, ratio, w_norm))
+                modules[layer_id + 2].weight.copy_(self.groupproximal(modules[layer_id + 2].weight.data, m_out, ratio, w_norm))
+                modules[layer_id + 2].bias.copy_(  self.groupproximal(modules[layer_id + 2].bias.data, m_out, ratio, w_norm))
+
+
+    def groupproximal(self, weight, m_out, ratio, w_norm):
+        # #######  Test ######
+        # weight[m_out] = 0
+        # return weight
+        ####################
+
+        # print(weight.size(), weight[m_out].size())
+        dimlen = len(weight.size())
+        while dimlen > 1:
+            w_norm = w_norm.unsqueeze(1)
+            dimlen -= 1
+
+        weight[m_out] = weight[m_out] / w_norm 
+        tmp = - self.lmd * ratio * self.lr + w_norm
+        tmp[tmp < 0] = 0 # tmp = max(0, - self.lmd * ratio * self.lr + w_norm)
+
+        weight[m_out] = weight[m_out] * tmp
+        return weight
+
+# def mobilenet_v2(**kwargs):
+#     """
+#     Constructs a MobileNet V2 model
+#     """
+#     return MobileNetV2(**kwargs)
 
 def my_mobilenet_v2(**kwargs):
     """
