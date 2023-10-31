@@ -359,4 +359,4 @@ def my_mobilenet_v2(**kwargs):
     """
     Constructs a MobileNet V2 model
     """
-    return MobileNetV2(**kwargs, gate_flag=True)
+    return MobileNetV2(**kwargs)

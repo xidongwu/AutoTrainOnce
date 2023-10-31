@@ -258,10 +258,40 @@ def main():
 
 # 0.31413G
 # 0.27539G
-
+# https://github.com/d-li14/mobilenetv2.pytorch/tree/master
         elif args.arch == 'mobnetv2':
+            model = my_mobilenet_v2(gate_flag=True)
+
+            if args.pretrained:
+                model_p = my_mobilenet_v2(gate_flag=False)
+                model_p.load_state_dict(torch.load('mobilenetv2_1.0-0c6065bc.pth'), strict=False)
+
+                model_ms = list(model.modules())
+                model_P_ms = list(model_p.modules())
+
+                for m in model_ms:
+                    if isinstance(m, virtual_gate):
+                        model_ms.remove(m)
+
+                for layer_id in range(len(model_ms)):
+                    m0 = model_P_ms[layer_id]
+                    m1 = model_ms[layer_id]
+                    if isinstance(m0, nn.BatchNorm2d):
+                        m1.weight.data.copy_(m0.weight.data.clone())
+                        m1.bias.data.copy_(m0.bias.data.clone())
+                        m1.running_mean.copy_(m0.running_mean.clone())
+                        m1.running_var.copy_(m0.running_var.clone())
+                    elif isinstance(m0, nn.Conv2d):
+                        m1.weight.data.copy_(m0.weight.data.clone())
+                    elif isinstance(m0, nn.Linear):
+                        m1.weight.data.copy_(m0.weight.data.clone())
+                        m1.bias.data.copy_(m0.bias.data.clone())
+
+                del model_p
+                print("pretrain mobnetv2 loaded")
+
             print("mobnetv2 ready")
-            model = my_mobilenet_v2()
+
             p = args.p
             args.model_name = 'mobnetv2'
 
