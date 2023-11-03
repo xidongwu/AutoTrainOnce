@@ -104,6 +104,8 @@ parser.add_argument('--stage', default='train-gate', type=str,
 parser.add_argument('--ls', default=True, type=str2bool)
 parser.add_argument('--mix_up', default=False, type=str2bool)
 
+parser.add_argument('--mbnet', default=False, type=str2bool)
+
 # parser.add_argument('--distill', default=False, type=str2bool)
 parser.add_argument('--gates', default=2, type=int)
 parser.add_argument('--pruning_method', default='flops', type=str)
@@ -440,28 +442,30 @@ def main():
                                      std=[0.229, 0.224, 0.225])
 
     if  args.stage == 'train-gate':
-        train_dataset = datasets.ImageFolder(
-            traindir,
-            transforms.Compose([
-                transforms.RandomResizedCrop(224),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.ColorJitter(
-                        brightness=0.4,
-                        contrast=0.4,
-                        saturation=0.4,
-                        hue=0.2),
-                normalize,
-            ]))
+        if args.mbnet:
+            train_dataset = datasets.ImageFolder(
+                    traindir,
+                    transforms.Compose([
+                        transforms.RandomResizedCrop(224),
+                        transforms.RandomHorizontalFlip(),
+                        transforms.ToTensor(),
+                        normalize,
+                    ]))
 
-#         if args.arch=='mobnetv3':
-#             resize_size, crop_size = (256, 224)
-#             auto_augment_policy = getattr(args, "auto_augment", None)
-#             random_erase_prob = getattr(args, "random_erase", 0.0)
-#             train_dataset = torchvision.datasets.ImageFolder(
-#                 traindir,
-#                 ClassificationPresetTrain(crop_size=crop_size, auto_augment_policy=auto_augment_policy,
-#                                                   random_erase_prob=random_erase_prob))
+        else:
+            train_dataset = datasets.ImageFolder(
+                traindir,
+                transforms.Compose([
+                    transforms.RandomResizedCrop(224),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    transforms.ColorJitter(
+                            brightness=0.4,
+                            contrast=0.4,
+                            saturation=0.4,
+                            hue=0.2),
+                    normalize,
+                ]))
 
     else:
         train_dataset = datasets.ImageFolder(
