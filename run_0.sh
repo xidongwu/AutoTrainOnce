@@ -27,5 +27,5 @@
 # 0.6577980318820581
 
 
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 nohup python -u main.py --arch mobnetv2 --workers 32 --stage train-gate --weight-decay 5e-2 --mbnet True --p 0.6578  --batch-size 1024 --lr 1e-3 --opt_name ADAMW --gates 2 --epoch 305 --start_epoch_hyper 25 --start_epoch_gl 50 --lmd 0 --grad_mul 5 --reg_w 4.0 --pretrained ../model_compress/Data/ILSVRC2012/  > mbv2_lmd0_66_adam_cos.txt 2>&1 &
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 nohup python -u main.py --arch mobnetv2 --workers 32 --stage train-gate --weight-decay 5e-2 --mbnet True --p 0.6578  --batch-size 1024 --lr 1e-3 --opt_name ADAMW --gates 2 --epoch 305 --start_epoch_hyper 25 --start_epoch_gl 50 --lmd 0 --grad_mul 5 --reg_w 4.0 --pretrained ../model_compress/Data/ILSVRC2012/  > mbv2_lmd0_66_adam_cos_2nd.txt 2>&1 &
 
