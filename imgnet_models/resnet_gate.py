@@ -477,7 +477,9 @@ class ResNet(nn.Module):
                 non_zero_idxes = flatten_x_norm > 0.0 # 
                 grad_mixed_l1_l2[non_zero_idxes] = flatten_x[non_zero_idxes] / (flatten_x_norm[non_zero_idxes] + self.safe_guard).unsqueeze(1)
 
-                flatten_hat_x[m_out] -= self.lr * lambdas[m_out].unsqueeze(1) * grad_mixed_l1_l2[m_out]
+                reg_update = self.lr * lambdas[m_out].unsqueeze(1) * grad_mixed_l1_l2[m_out]
+
+                flatten_hat_x[m_out] -= reg_update
 
                 flatten_hat_x[m_out].copy_(self.half_space_project(flatten_hat_x[m_out], flatten_x[m_out], self.epsilon))
 

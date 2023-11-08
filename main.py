@@ -485,6 +485,9 @@ def main():
             normalize,
         ]))
 
+    print("train_dataset", train_dataset)
+    print("val_dataset", val_dataset)
+
 #     # if args.distributed:
 #     #     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
 #     # else:
@@ -498,6 +501,7 @@ def main():
         val_dataset,
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
+
 
     if args.stage=='train-gate':
 

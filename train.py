@@ -370,7 +370,7 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
                 if epoch < int((args.epochs - 5)/ 2):
                     lmdValue = 10
                 else:
-                    lmdValue = 100 #10000000000
+                    lmdValue = 1000 #10000000000
 
             with torch.no_grad():
                 if args.project == 'gl':
