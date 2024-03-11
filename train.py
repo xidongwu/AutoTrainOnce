@@ -9,196 +9,6 @@ from torch.utils.data import DataLoader
 from imgnet_models.sampler import ImbalancedAccuracySampler
 import torch.nn as nn
 
-# def train(train_loader, model, criterion, optimizer, epoch, args, resource_constraint):
-#     batch_time = AverageMeter('Time', ':6.3f')
-#     data_time = AverageMeter('Data', ':6.3f')
-#     losses = AverageMeter('Loss', ':.4e')
-#     top1 = AverageMeter('Acc@1', ':6.2f')
-#     top5 = AverageMeter('Acc@5', ':6.2f')
-#     progress = ProgressMeter(len(train_loader), batch_time, data_time, losses, top1,
-#                              top5, prefix="Epoch: [{}]".format(epoch))
-
-#     if args.stage == 'train-model':
-#         if isinstance(model, torch.nn.DataParallel):
-#             model.module.activate_weights()
-#             model.module.set_training_flag(False)
-#         else:
-#             model.activate_weights()
-#             model.set_training_flag(False)
-#         tqdm_loader = tqdm(train_loader)
-#         model.train()
-
-#     elif args.stage == 'train-gate':
-#         if isinstance(model,torch.nn.DataParallel):
-#             model.module.foreze_weights()
-#             model.module.set_training_flag(True)
-#         else:
-#             model.foreze_weights()
-#             model.set_training_flag(True)
-#         tqdm_loader = train_loader
-#         sumres_loss=0
-#         if args.distill:
-#             teacher_net = copy.deepcopy(model)
-#             if isinstance(model, torch.nn.DataParallel):
-#                 teacher_net.module.set_training_flag(False)
-#             else:
-#                 teacher_net.set_training_flag(False)
-#             teacher_net.eval()
-
-
-
-#     end = time.time()
-#     for i, (input, target) in enumerate(tqdm_loader):
-#         # measure data loading time
-#         data_time.update(time.time() - end)
-
-#         if args.gpu is not None:
-#             input = input.cuda(args.gpu, non_blocking=True)
-#         target = target.cuda(args.gpu, non_blocking=True)
-
-#         # compute output
-#         output = model(input)
-
-#         #loss = criterion(output, target)
-#         if args.stage == 'train-gate':
-#             if isinstance(model, torch.nn.DataParallel):
-#                 gate_parameters = model.module.get_gate_parameters()
-#             else:
-
-#                 gate_parameters = model.get_gate_parameters()
-#             #binarized_loss = criterion_binarization(gate_parameters, epoch)
-#             #loss+= 10*binarized_loss
-#             #loss = 10 * binarized_loss
-#             res_loss = resource_constraint(gate_parameters)
-#             if args.distill:
-#                 with torch.no_grad():
-#                     t_outputs = teacher_net(input)
-#                 loss = loss_fn_kd(output, target, t_outputs, T=3, alpha=0.3)
-#             else:
-#                 loss = criterion(output, target)
-#             loss+= 2*res_loss
-#         else:
-#             loss = criterion(output, target)
-
-
-#         # measure accuracy and record loss
-#         acc1, acc5 = accuracy(output, target, topk=(1, 5))
-#         losses.update(loss.item(), input.size(0))
-#         top1.update(acc1[0], input.size(0))
-#         top5.update(acc5[0], input.size(0))
-
-#         # compute gradient and do SGD step
-#         optimizer.zero_grad()
-#         loss.backward()
-#         optimizer.step()
-#         if args.stage=='train-gate':
-#             sumres_loss+=res_loss.item()
-#             if isinstance(model, torch.nn.DataParallel):
-#                 model.module.adjust_gate_parameter()
-#             else:
-#                 model.adjust_gate_parameter()
-
-
-#         # measure elapsed time
-#         batch_time.update(time.time() - end)
-#         end = time.time()
-
-
-#         if args.stage=='train-gate':
-#             if i == len(train_loader)-1:
-#                 if isinstance(model, torch.nn.DataParallel):
-#                     display_structure(model.module.get_gate_parameters())
-#                 else:
-#                     display_structure(model.get_gate_parameters())
-#                 print(' * Epoch{epoch: d} Loss {loss:.3f} Res Loss {resloss: .3f} Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-#               .format(epoch=epoch, loss=loss, resloss=sumres_loss/ len(train_loader), top1=top1, top5=top5))
-
-#         else:
-#             if i % args.print_freq == 0:
-#                 progress.print(i)
-
-
-# def train_hyperp(train_loader, model, criterion, optimizer,optimizer_p, epoch, args, resource_constraint,hyper_net=None, pp_net=None):
-#     tqdm_loader = tqdm(train_loader)
-#     model.eval()
-#     pp_net.train()
-#     hyper_net.train()
-
-#     train_loss = 0
-#     resource_loss = 0
-#     hyper_loss = 0
-
-#     total = 0
-
-#     batch_time = AverageMeter('Time', ':6.3f')
-#     data_time = AverageMeter('Data', ':6.3f')
-#     losses = AverageMeter('Loss', ':.4e')
-#     top1 = AverageMeter('Acc@1', ':6.2f')
-#     top5 = AverageMeter('Acc@5', ':6.2f')
-#     progress = ProgressMeter(len(train_loader), batch_time, data_time, losses, top1,
-#                              top5, prefix="Epoch: [{}]".format(epoch))
-
-#     for batch_idx, (inputs, targets) in enumerate(tqdm_loader):
-#         if args.gpu is not None:
-#             inputs = inputs.cuda(args.gpu, non_blocking=True)
-#         targets = targets.cuda(args.gpu, non_blocking=True)
-#         # pp_net.train()
-#         with torch.no_grad():
-#             vector = hyper_net.resource_output()
-#             if isinstance(model, torch.nn.DataParallel):
-#                 model.module.set_vritual_gate(vector)
-#             else:
-#                 model.set_vritual_gate(vector)
-#             outputs = model(inputs)
-#             _, predicted = outputs.max(1)
-#             local_correct = predicted.eq(targets).sum()
-#             local_acc = local_correct.float() / float(targets.size(0))
-
-#         pred_p = pp_net(vector.detach())
-#         loss = F.l1_loss(pred_p,local_acc.float())
-
-#         optimizer_p.zero_grad()
-#         loss.backward()
-#         optimizer_p.step()
-
-#         vector = hyper_net()
-#         concrete_vector = hyper_net.resource_output()
-
-#         pred = pp_net(concrete_vector)
-
-#         if isinstance(model, torch.nn.DataParallel):
-#             model.module.set_vritual_gate(vector)
-#         else:
-#             model.set_vritual_gate(vector)
-#         outputs = model(inputs)
-
-#         c_loss = criterion(outputs, targets)
-#         res_loss = resource_constraint(concrete_vector)
-#         # mse_loss = model.get_mse_loss()
-#         # + mse_loss
-#         h_loss =  2*res_loss + c_loss + 1/pred
-
-#         optimizer.zero_grad()
-#         h_loss.backward()
-#         optimizer.step()
-
-#         total += targets.size(0)
-#         train_loss += loss.item()
-#         resource_loss +=res_loss.item()
-#         hyper_loss += h_loss.item()
-#         acc1, acc5 = accuracy(outputs, targets, topk=(1, 5))
-#         losses.update(loss.item(), inputs.size(0))
-#         top1.update(acc1[0], inputs.size(0))
-#         top5.update(acc5[0], inputs.size(0))
-
-#     with torch.no_grad():
-#         # resource_constraint.print_current_FLOPs(hyper_net.resource_output())
-#         vector = hyper_net()
-#         display_structure_hyper(hyper_net.transfrom_output(vector))
-#     print(' * Epoch{epoch: d} Loss {loss:.3f} Res Loss {resloss: .3f} Hyper Loss {hyperloss: .3f} Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-#           .format(epoch=epoch, loss=train_loss/ len(train_loader), resloss=resource_loss / len(train_loader), hyperloss=hyper_loss/ len(train_loader), top1=top1, top5=top5))
-
-
 def set_grad(var):
     def hook(grad):
         var.grad = grad
@@ -291,13 +101,6 @@ def one_step_net(inputs, targets, net, masks, args):
     outputs = net(inputs)
 
     loss = cross_entropy_onehot_target(outputs, targets)
-
-    # if args.ls:
-    #     loss = LabelSmoothingLoss(classes=1000)(outputs, targets)
-    #     # loss_c = nn.CrossEntropyLoss()(outputs, targets)
-    #     # loss = alpha * loss_smooth + (1 - args.alpha) * loss_c
-    # else:
-    #     loss = nn.CrossEntropyLoss()(outputs, targets)
 
 
     # if hasattr(args, 'reg_align') and args.reg_align:
@@ -418,9 +221,6 @@ def soft_train(train_loader, model, hyper_net, criterion, valid_loader, optimize
             progress.print(i)
 
 
-        # if i == 200:
-        #     break
-
     print("Project Lmd in this Epoch:", lmdValue)
     if epoch >= args.start_epoch:
         if epoch < int((args.epochs - 5)/ 2) + 5: 
@@ -469,8 +269,6 @@ def simple_validate(val_loader, model, criterion):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            # if i % args.print_freq == 0:
-            #     progress.print(i)
 
         # TODO: this should also be done with the ProgressMeter
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'

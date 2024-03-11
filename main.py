@@ -10,38 +10,23 @@ import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-# # import torch.distributed as dist
 import torch.optim
 import torch.multiprocessing as mp
 import torch.utils.data
-# import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
-# #from models.resnet import ResNet34
 from imgnet_models.resnet_gate import my_resnet50, my_resnet101, my_resnet34
-# #from imgnet_models.mobilentv2 import my_mobilenet_v2, mobilenet_v2
 from imgnet_models.mobilenetv2_custom import my_mobilenet_v2
-# from imgnet_models.mobilenetv3 import mobilenetv3, my_mobilenetv3
-# from imgnet_models.densenet_gate import my_densenet201,densenet201
 from imgnet_models.hypernet import HyperStructure
-# from Optimizer import AdamW
-# from imgnet_models.gate_function import soft_gate
-# from sgdw import SGDW
-from warm_up.Warmup_Sch import GradualWarmupScheduler
-# from warm_up.transform_operations import *
-# from packaging import version
+from Warmup_Sch import GradualWarmupScheduler
 from alignment_functions import SelectionBasedRegularization, SelectionBasedRegularization_MobileNet, SelectionBasedRegularization_MobileNetV3
 from torch.utils.data.dataset import random_split
 
 from repeat_dataloader import MultiEpochsDataLoader
 from utils import *
 from train import *
-# from presets import *
 
-# model_names = sorted(name for name in models.__dict__
-#     if name.islower() and not name.startswith("__")
-#     and callable(models.__dict__[name]))
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -139,8 +124,6 @@ best_acc1 = 0
 def main():
     args = parser.parse_args()
 
-    # if args.seed is not None:
-    #     random.seed(args.seed)
     torch.manual_seed(args.seed)
     cudnn.deterministic = True
 
@@ -152,22 +135,10 @@ def main():
     print(args)
     global best_acc1
 
-    # # create model
-    # if args.pretrained:
-    #     print("=> using pre-trained model '{}'".format(args.arch))
-    #     model = models.__dict__[args.arch](pretrained=True)
-    # else:
     print("=> creating model '{}'".format(args.arch))
-    #model = models.__dict__[args.arch]()
-    #model = ResNet34()
     if args.stage == 'train-gate':
         print("None")
         if args.arch == 'resnet50':
-# def help(ratio):
-#     tt = 3.63588
-#     t = 4.12283
-#     return (t * ratio - (t-tt)) / tt
-
             if args.gates == 2:
                 gate_string = '_2gates'
             else:
@@ -227,17 +198,12 @@ def main():
             resource_reg = Flops_constraint_resnet_bb(args.p, size_kernel, size_out, size_group, size_inchannel,
                                      
                                                       size_outchannel, w=args.reg_w, HN=True,structure=structure)
-# + Number of FLOPs: 3.67661G
-# + Number of FLOPs: 3.53425G
         elif args.arch == 'resnet34':
 
             if args.gates == 2:
                 gate_string = '_2gates'
             else:
                 gate_string = ''
-            # args.model_name = 'resnet'
-            # state_dict = torch.load('./checkpoint/%s_base%s.pt' % (args.arch, gate_string))
-            # model.load_state_dict(state_dict['state_dict'])
             print("ResNet34 ready")
             model = my_resnet34(num_gate=1)
             args.model_name = 'resnet'
@@ -317,8 +283,6 @@ def main():
     elif args.stage == 'baseline':
         if args.arch == 'resnet50':
             model = my_resnet50()
-            #state_dict = torch.load('./checkpoint/%s_new.pt' % (args.arch))
-            #model.load_state_dict(state_dict['state_dict'])
 
 
     if args.gpu is not None:
@@ -327,29 +291,17 @@ def main():
 
     else:
         model = torch.nn.DataParallel(model).cuda()
-        # DataParallel will divide and allocate batch_size to all available GPUs
-#         if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
-#             model.features = torch.nn.DataParallel(model.features)
-#             model.cuda()
-#         else:
-#             
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss() #.cuda(args.gpu)
     if args.stage == 'train-gate':
-        #criterion = LabelSmoothingLoss(classes=1000)    ####### 用这个 ##########
-        #params = hyper_net.parameters()
         params_group = group_weight(hyper_net)
         print(len(list(hyper_net.parameters())))
-        #params = filter(lambda p: p.requires_grad, model.parameters())
-        #print(list(params))
-        # if args.arch == 'mobnetv2':
+
         optimizer_hyper = torch.optim.AdamW(params_group, lr=1e-3, weight_decay=1e-2)
         scheduler_hyper = torch.optim.lr_scheduler.MultiStepLR(optimizer_hyper, milestones=[int(0.98 * ((args.epochs - 5) / 2) + 5)], gamma=0.1)
 
-        # nesterov_flag = False
-        # if args.arch == 'densenet201':
-        #     nesterov_flag = True
+
         if args.bn_decay:
             print('bn not decay')
             params = group_weight(model)
@@ -383,14 +335,8 @@ def main():
         else:
             base_sch = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, int(args.epochs - 5))
 
-            # remain_epochs = args.epochs - 5
-            # drop_point = [int((remain_epochs - 10) / 3), int((remain_epochs - 10) / 3 * 2), int(remain_epochs - 10)]
-            # print(drop_point)
-            # base_sch = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=drop_point, gamma=0.1)
         print("optimizer scheduler >>>", base_sch)
 
-        # if args.arch == 'mobnetv3':
-        #     base_sch = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_step_size, gamma=args.lr_gamma)
         scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=5, after_scheduler=base_sch)
         print(base_sch)
     else:
@@ -487,11 +433,6 @@ def main():
 
     print("train_dataset", train_dataset)
     print("val_dataset", val_dataset)
-
-#     # if args.distributed:
-#     #     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-#     # else:
-#     #     train_sampler = None
 
     train_loader = MultiEpochsDataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,

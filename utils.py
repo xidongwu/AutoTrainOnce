@@ -202,18 +202,6 @@ class Flops_constraint_resnet(nn.Module):
         return self.weight*loss
 
 
-# def conv_hook(self, input, output):
-#     batch_size, input_channels, input_height, input_width = input[0].size()
-#     output_channels, output_height, output_width = output[0].size()
-#
-#     kernel_ops = self.kernel_size[0] * self.kernel_size[1] * (self.in_channels / self.groups)
-#     bias_ops = 1 if self.bias is not None else 0
-#
-#     params = output_channels * (kernel_ops + bias_ops)
-#     flops = (kernel_ops * (2 if multiply_adds else 1) + bias_ops) * output_channels * output_height * output_width * batch_size
-#
-#     list_conv.append(flops)
-
 class Flops_constraint_resnet_bb(nn.Module):
     def __init__(self, p, kernel_size, out_size, group_size, size_inchannel, size_outchannel, in_channel=3, w=10, HN=False, structure=None):
         super(Flops_constraint_resnet_bb, self).__init__()
@@ -593,27 +581,6 @@ class Flops_constraint_mobnet(nn.Module):
 
                 sum_flops += self.k_size[3 * i + 2] * (channels / self.g_size[3 * i + 2]) * self.out_csize[3 * i + 2] * \
                              self.out_size[3 * i + 2] + 3 * self.out_csize[3 * i + 2] * self.out_size[3 * i + 2]
-        #if self.t_flops - (self.p)>0:
-        #resource_value = torch.clamp(sum_flops / self.t_flops - (self.p), min=0)
-
-
-        # resource_ratio = (sum_flops / self.t_flops)
-        # abs_rv = (resource_ratio/self.p - 1).abs()
-
-        # resource_value = sum_flops / self.t_flops - (self.p)
-        # abs_rv = torch.abs(resource_value)
-        #
-        #
-        # print(abs_rv)
-
-        # resource_value = (sum_flops / self.t_flops) / (self.p)
-        # abs_rv = (resource_value -1).abs()
-        # # loss = 1 - torch.exp(-abs_rv / 0.25)
-        # loss = torch.exp(abs_rv / 0.25) - 1
-        # loss = - torch.log(1 - abs_rv + 1e-8)
-
-        #ratio regularization
-
 
 ###############
         resource_ratio = (sum_flops / self.t_flops)
@@ -627,23 +594,6 @@ class Flops_constraint_mobnet(nn.Module):
             loss = torch.log(((self.p) / abs_rv))
 
 
-####################3
-
-
-
-
-        # resource_ratio = (sum_flops / self.t_flops)
-        # abs_rv = torch.clamp(resource_ratio, min=self.p+0.01)
-        # loss = torch.log((abs_rv / self.p))
-        # # loss = torch.log(((resource_ratio/self.p).pow(0.9)-1).abs()+1)
-        # loss = torch.log((abs_rv/self.p).pow(1.2))
-        #
-
-        # + torch.abs(sum_flops/self.t_flops- self.last_flops/self.t_flops)**2
-
-        # diff = torch.abs(sum_flops/self.t_flops - (self.p))**2
-        # loss = torch.log(diff+1)
-        #self.last_flops = sum_flops.detach()
         return self.weight*loss
 
 class Flops_constraint_mobnetv3(nn.Module):
@@ -1305,23 +1255,6 @@ def get_middle_Fsize_mobnetv3(model, input_res=224):
         all_dict['size_inchannel'].append(input_channels)
         all_dict['size_outchannel'].append(output_channels)
 
-    # def linear_hook(self, input, output):
-    #     #batch_size, input_channels  = input[0].size()final_gate
-    #     batch_size = input[0].size(0) if input[0].dim() == 2 else 1
-    #     input_size = input[0].size(1) if input[0].dim() == 2 else input[0].size(0)
-    #     #print(output.size())
-    #     #output_size = output[0].size(1) if input[0].dim() == 2 else input[0].size(0)
-    #     output_size = output.size(1)
-    #
-    #     weight_ops = self.weight.nelement()
-    #     assert weight_ops == input_size*output_size
-    #     #bias_ops = self.bias.nelement()
-    #     size_out.append(-1)
-    #     size_kernel.append(-1)
-    #     size_group.append(-1)
-    #     size_inchannel.append(input_size)
-    #     size_outchannel.append(output_size)
-        #flops = batch_size * (weight_ops + bias_ops)
     def foo(net):
         modules = list(net.modules())
         #print(modules)
@@ -1331,8 +1264,6 @@ def get_middle_Fsize_mobnetv3(model, input_res=224):
             if isinstance(m0, nn.BatchNorm2d) or isinstance(m0, nn.Conv2d) or isinstance(m0, nn.Linear) or isinstance(m0, nn.ReLU) or \
                     isinstance(m0, nn.ReLU6) or isinstance(m0, virtual_gate) or isinstance(m0, Hswish):
                 truncate_module.append(m0)
-        # or isinstance(m0, Hsigmoid)
-        # print(truncate_module)
 
         for layer_id in range(len(truncate_module)):
             m = truncate_module[layer_id]
