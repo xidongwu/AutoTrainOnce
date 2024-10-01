@@ -28,14 +28,6 @@ If you find the repo useful, please kindly star this repository and cite our pap
 
 ```bibtex
 
-@inproceedings{gao2023structural,
-  title={Structural Alignment for Network Pruning through Partial Regularization},
-  author={Gao, Shangqian and Zhang, Zeyu and Zhang, Yanfu and Huang, Feihu and Huang, Heng},
-  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
-  pages={17402--17412},
-  year={2023}
-}
-
 
 @inproceedings{wu2024ato,
   title={Auto-Train-Once: Controller Network Guided Automatic Network Pruning
