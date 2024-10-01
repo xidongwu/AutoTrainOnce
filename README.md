@@ -1,6 +1,10 @@
 # Auto-Train-Once: Controller Network Guided Automatic Network Pruning from Scratch
 
-This repository is the Pytorch implementation of **Auto-Train-Once** (**ATO**). ATO is an automatic network pruning algorithm designed to dynamically reduce the computational and storage costs of DNN with controller network. 
+This repository is the Pytorch implementation of **Auto-Train-Once** (**ATO**). ATO is an automatic network pruning algorithm designed to dynamically reduce the computational and storage costs of DNN with a controller network. It can train and prune deep learning models automatically and completely end-to-end. After model training, we can directly obtain the compressed
+model without additional fine-tuning steps. Importantly, our method does not rely on the specific projectors compared with OTO and OTOv2. Additionally, we provide a comprehensive complexity analysis to ensure the convergence of our algorithm, covering both the general non-adaptive optimizer (e.g. SGD) and the adaptive optimizer (e.g. ADAM).
+
+
+
 
 <div align="center">
 	<img src="./overview/ATO_figs.png" alt="ali_pay" width="600" />
